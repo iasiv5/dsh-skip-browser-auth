@@ -1,0 +1,60 @@
+{
+  "name": "dsh-skip-browser-auth",
+  "version": "0.1.0",
+  "description": "个人自用：在 DSH 0.1.2-rc.1 上跳过 BrowserAuth 的 trusted-network Connection 替换插件",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/host.js",
+  "exports": {
+    ".": "./lib/host.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test tests/*.test.mjs tests/composition/*.test.mjs",
+    "test:rc2-fixture": "node scripts/install-rc2-fixture.mjs",
+    "test:all": "npm run test:rc2-fixture && npm run build && npm run typecheck && npm test",
+    "prepare": "npm run build"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [],
+      "immediately": true
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-client-connection": "0.1.2-rc.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/schemastery": "*"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/cordis-plugin-include": "1.0.7",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.3",
+    "@deepseek-ai/dsh-credentials": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-credentials-local": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-host-frontend-static": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-host-webserver": "0.1.2-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "@types/node": "^24.0.0",
+    "js-yaml": "^4.2.0",
+    "typescript": "^5.6.0"
+  }
+}
