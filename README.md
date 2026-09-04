@@ -107,7 +107,22 @@ npm run test:all
 
 ## 实机 dormant 前后对照记录
 
-（待本机 rc.2 实机验证后回填。）
+本机 DSH runtime 为 `0.1.1-rc.2`（2026-09-05 实测）。验证协议：安装前基线 →
+安装 + 重启 → 行为逐项对照 → 卸载 + 重启 → 复验基线；journal 检查统一使用
+安装前固化的时间锚；任何失败立即回滚（本次回滚未被触发）。
+
+| 检查项 | 安装前基线 | 安装后（dormant） | 卸载恢复后 |
+| --- | --- | --- | --- |
+| `GET /` | `200` `text/html; charset=utf-8` | `200` `text/html; charset=utf-8` | `200` `text/html; charset=utf-8` |
+| `POST /api/session.list`（未认证） | `200` `application/json` | `200` `application/json` | `200` `application/json` |
+| envelope `type` / `rpcId` / `resultOk` | `server-response` / `probe` / `true` | `server-response` / `probe` / `true` | `server-response` / `probe` / `true` |
+| 首页静态 shell marker（首个 `<script src=`） | 在 | 在 | 在 |
+| 首页认证文案 `dsh web authentication required` | 0 次出现 | 0 次出现 | 0 次出现 |
+
+三组行为文件逐字节 diff 均为空；安装后与卸载后 journal（同一时间锚窗口内）
+均无固定警告 `BrowserAuth has been skipped`、无 err 级日志。配置证据：安装后
+`dsh --profile web --dump-config` 出现 `trusted-connection` 行（仅作安装证据，
+不作为未激活证明）；卸载后该行消失、bundles 中无本插件。回滚未被触发。
 
 ## 升级到 0.1.2-rc.1 后的 active 验证清单
 
