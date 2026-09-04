@@ -81,7 +81,7 @@ test('row 2 inserts the plugin row with the negated row gate', () => {
   assert.equal(row2.insert.length, 1)
   const inserted = row2.insert[0]
   assert.equal(inserted.id, 'trusted-connection')
-  assert.equal(inserted.name, 'dsh-skip-browser-auth')
+  assert.equal(inserted.name, '@iasiv5/dsh-skip-browser-auth')
   assert.deepEqual(inserted.inject, ['webRuntime'])
   assert.deepEqual(inserted.disabled, { __jsExpr: `!(${GATE_ROW_ALLOWED_EXPRESSION})` })
   assert.deepEqual(inserted.config, { trustedHosts: { __jsExpr: 'ctx.webRuntime.trustedHosts' } })

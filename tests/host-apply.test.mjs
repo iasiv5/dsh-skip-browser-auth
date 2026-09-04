@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import { apply, inject, Config } from '../lib/host.js'
 
-const FIXED_WARNING = 'dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.'
+const FIXED_WARNING = '@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.'
 const CONNECTION_PACKAGE = '@deepseek-ai/dsh-client-connection'
 
 test('plugin injects only webServer and exports a Config schema', () => {

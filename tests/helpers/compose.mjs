@@ -96,7 +96,7 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
     ['@deepseek-ai/dsh-host-frontend-static', FrontendStatic],
     ['@deepseek-ai/dsh-client-connection', Connection],
     ['@deepseek-ai/dsh-credentials-local', LocalCredentials],
-    ['dsh-skip-browser-auth', hostModule],
+    ['@iasiv5/dsh-skip-browser-auth', hostModule],
     ...Object.entries(modules),
   ])
 

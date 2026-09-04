@@ -10,7 +10,7 @@
   disabled: !!js '(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== ''function'') return false; let url; try { url = internal.version === ''v2'' ? internal.resolveSync(ctx.baseUrl, { specifier: ''@deepseek-ai/dsh-client-connection/package.json'', attributes: {} }).url : internal.resolveSync(''@deepseek-ai/dsh-client-connection/package.json'', ctx.baseUrl, {}).url; } catch (gateError) { return false; } if (typeof url !== ''string'') return false; const match = decodeURIComponent(url).match(/[+]dsh-client-connection@([^/_]+)[_/]/); return match !== null && match[1] === ''0.1.2-rc.1''; } catch (gateError) { return false; } })()'
 - insert:
     - id: trusted-connection
-      name: dsh-skip-browser-auth
+      name: '@iasiv5/dsh-skip-browser-auth'
       inject:
         - webRuntime
       config:

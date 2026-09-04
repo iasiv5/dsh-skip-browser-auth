@@ -31,7 +31,7 @@ const stubRequire = (specifier) => {
 
 test('the bundle registers exactly once under the re-ID', () => {
   assert.equal(registrations.length, 1)
-  assert.equal(registrations[0].id, 'dsh-skip-browser-auth')
+  assert.equal(registrations[0].id, '@iasiv5/dsh-skip-browser-auth')
 })
 
 test('factory materializes with only baseline requires and returns the plugin namespace', () => {

@@ -1,5 +1,5 @@
 /**
- * dsh-skip-browser-auth host half：trusted-network Connection Replacement。
+ * @iasiv5/dsh-skip-browser-auth host half：trusted-network Connection Replacement。
  *
  * 复用官方导出的 HostConnectionService（对认证的全部依赖只有
  * isAuthenticated / authorizeIndex / authenticatedUrl 三个方法，由
@@ -23,13 +23,13 @@ import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './bridge.js'
 import { CONNECTION_PACKAGE, GATE_VERSION } from './gate.js'
 
 /** Stable Cordis plugin name. */
-export const name = 'dsh-skip-browser-auth'
+export const name = '@iasiv5/dsh-skip-browser-auth'
 
 /** Services required before providing the replacement Connection. */
 export const inject = ['webServer']
 
 /** 启动警告固定文案（全局约束：Replacement 激活时逐字输出）。 */
-const SKIP_WARNING = 'dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.'
+const SKIP_WARNING = '@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.'
 
 /** Headroom for RPC JSON fields around aggregate base64 image payloads. */
 const REQUEST_ENVELOPE_HEADROOM_BYTES = 1024 * 1024
@@ -44,7 +44,7 @@ function assertImageBodyCapacity(ctx: Context, maxRequestBodyBytes: number): voi
   ) + REQUEST_ENVELOPE_HEADROOM_BYTES
   if (maxRequestBodyBytes < requiredImageBodyBytes) {
     throw new Error(
-      `dsh-skip-browser-auth maxRequestBodyBytes (${String(maxRequestBodyBytes)}) must be at least `
+      `@iasiv5/dsh-skip-browser-auth maxRequestBodyBytes (${String(maxRequestBodyBytes)}) must be at least `
       + `${String(requiredImageBodyBytes)} for the configured aggregate image limit`,
     )
   }
@@ -85,13 +85,13 @@ function assertGateBackstop(ctx: Context): void {
   const current = (ctx as { fiber?: { entry?: FiberEntryLike } }).fiber?.entry
   if (loader === undefined && current === undefined) return
   if (loader === undefined) {
-    throw new Error('dsh-skip-browser-auth: gate backstop unavailable: loader service is missing')
+    throw new Error('@iasiv5/dsh-skip-browser-auth: gate backstop unavailable: loader service is missing')
   }
   if (loader.internal === undefined) {
-    throw new Error('dsh-skip-browser-auth: gate backstop unavailable: loader internal resolver is missing')
+    throw new Error('@iasiv5/dsh-skip-browser-auth: gate backstop unavailable: loader internal resolver is missing')
   }
   if (current === undefined) {
-    throw new Error('dsh-skip-browser-auth: gate backstop unavailable: current loader entry is missing')
+    throw new Error('@iasiv5/dsh-skip-browser-auth: gate backstop unavailable: current loader entry is missing')
   }
 
   // (a) 版本断言：与官方 row 同一解析锚点（loader.internal），读 manifest 比对白名单。
@@ -103,7 +103,7 @@ function assertGateBackstop(ctx: Context): void {
     : internal.resolveSync(specifier, baseUrl, {})
   const manifest = JSON.parse(readFileSync(fileURLToPath(resolved?.url as string), 'utf8')) as { version?: unknown }
   if (manifest.version !== GATE_VERSION) {
-    throw new Error(`dsh-skip-browser-auth: official connection manifest is ${String(manifest.version)}, whitelist is ['0.1.2-rc.1']; disable or uninstall the plugin`)
+    throw new Error(`@iasiv5/dsh-skip-browser-auth: official connection manifest is ${String(manifest.version)}, whitelist is ['0.1.2-rc.1']; disable or uninstall the plugin`)
   }
 
   // (b) 绑定断言：官方行被禁用是 Replacement 放行的前提，且不得有活跃 fiber。
@@ -113,7 +113,7 @@ function assertGateBackstop(ctx: Context): void {
     || official.options?.name !== CONNECTION_PACKAGE
     || official.disabled !== true
     || official.fiber !== undefined) {
-    throw new Error('dsh-skip-browser-auth: gate binding violated; refusing to run')
+    throw new Error('@iasiv5/dsh-skip-browser-auth: gate binding violated; refusing to run')
   }
 }
 
@@ -170,7 +170,7 @@ export async function apply(ctx: Context, config?: TrustedConnectionConfig): Pro
       await bridge(req, res, fetchHandler, maxRequestBodyBytes)
     },
   }
-  ctx.effect(() => ctx.webServer.register(route), 'dsh-skip-browser-auth: /api route')
+  ctx.effect(() => ctx.webServer.register(route), '@iasiv5/dsh-skip-browser-auth: /api route')
   ctx.inject(['attachments'], (attachmentCtx) => {
     assertImageBodyCapacity(attachmentCtx, maxRequestBodyBytes)
   })

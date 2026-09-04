@@ -1,4 +1,4 @@
-# dsh-skip-browser-auth
+# @iasiv5/dsh-skip-browser-auth
 
 个人自用的 DSH Web 插件：在兼容版本上替换官方 Connection 提供方，跳过 DSH 官方
 BrowserAuth 浏览器身份层，同时完整保留请求信任栅栏（request trust fence）。
@@ -34,7 +34,7 @@ cookie，保护全部 Host API 与 Remote WebSocket。本插件安装后在任�
 Replacement 激活时进程会输出以下固定警告（逐字）：
 
 ```
-dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.
+@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.
 ```
 
 trusted-network mode 的判据只有一个：**请求来源是否通过信任栅栏**
@@ -47,11 +47,11 @@ trusted-network mode 的判据只有一个：**请求来源是否通过信任栅
 
 ```sh
 # 安装（任何 DSH 版本都可安装；非 0.1.2-rc.1 上自动 dormant）
-dsh plugin --profile web add /path/to/dsh-skip-browser-auth
+dsh plugin --profile web add /path/to/@iasiv5/dsh-skip-browser-auth
 sudo systemctl restart deepseek-harness.service
 
 # 卸载（恢复官方行为）
-dsh plugin --profile web remove dsh-skip-browser-auth
+dsh plugin --profile web remove @iasiv5/dsh-skip-browser-auth
 sudo systemctl restart deepseek-harness.service
 ```
 
@@ -172,6 +172,6 @@ DSH 升级到 `0.1.2-rc.1` 并安装本插件、重启后，依次执行：
 4. 回滚路径（任何时候行为异常）：
 
    ```sh
-   dsh plugin --profile web remove dsh-skip-browser-auth
+   dsh plugin --profile web remove @iasiv5/dsh-skip-browser-auth
    sudo systemctl restart deepseek-harness.service
    ```

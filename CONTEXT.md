@@ -1,4 +1,4 @@
-# dsh-skip-browser-auth
+# @iasiv5/dsh-skip-browser-auth
 
 一个个人用的 DSH Web 插件：通过在兼容版本上替换 Connection 提供方来跳过 DSH 官方 BrowserAuth 身份层，同时完整保留请求信任栅栏。不修改 DSH 本体，不创建新的监听服务。
 

@@ -32,7 +32,7 @@ const patchList = [
     insert: [
       {
         id: 'trusted-connection',
-        name: 'dsh-skip-browser-auth',
+        name: '@iasiv5/dsh-skip-browser-auth',
         inject: ['webRuntime'],
         config: { trustedHosts: { __jsExpr: 'ctx.webRuntime.trustedHosts' } },
         disabled: { __jsExpr: `!(${GATE_ROW_ALLOWED_EXPRESSION})` },

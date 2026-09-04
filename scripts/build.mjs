@@ -32,7 +32,7 @@ function countOccurrences(text, needle) {
 //    六个锚点串各恰好出现 1 次是替换安全性的前提，先断言再动手。
 const CONNECTION_PACKAGE = '@deepseek-ai/dsh-client-connection'
 const OFFICIAL_ID_LINE = `id: "${CONNECTION_PACKAGE}"`
-const NEW_ID_LINE = 'id: "dsh-skip-browser-auth"'
+const NEW_ID_LINE = 'id: "@iasiv5/dsh-skip-browser-auth"'
 const ANCHORS = [
   'window.__ModuleLoader__.load({', // wrapper 开头
   OFFICIAL_ID_LINE, // 注册 id（唯一替换点）

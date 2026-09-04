@@ -68,7 +68,7 @@ function parseAuthority(authority: string): URL | undefined {
 export function assertTrustedAuthority(entry: string): void {
   const entryUrl = parseAuthority(entry)
   if (entryUrl !== undefined && canonicalAuthority(entry, entryUrl) === entry.toLowerCase()) return
-  throw new Error(`dsh-skip-browser-auth: trustedHosts entry ${JSON.stringify(entry)} is not a bare host[:port] authority`)
+  throw new Error(`@iasiv5/dsh-skip-browser-auth: trustedHosts entry ${JSON.stringify(entry)} is not a bare host[:port] authority`)
 }
 
 /**
