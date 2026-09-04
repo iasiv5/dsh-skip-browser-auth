@@ -73,13 +73,26 @@ interface LoaderInternalLike {
  * apply 内 backstop（最后防线，fail loud）：版本白名单断言读取官方 manifest
  * 本体（组合期探针只读 pnpm 路径段，会被「路径真、manifest 假」的漂移骗过）；
  * 绑定断言确认当前 entry 子树内的官方 connection 行确实被本插件禁用、
- * 同组同名且无活跃 fiber。仅手搭测试上下文会缺 loader / fiber entry；
- * 产品组合两者必有。
+ * 同组同名且无活跃 fiber。
+ *
+ * 跳过 seam 仅限「完全没有 Loader、也没有 Loader entry」的直接单元测试调用；
+ * 产品组合中 loader / internal / current 任一缺失都意味着最后防线无法执行，
+ * 必须在创建 Connection 服务与注册 /api 之前 fail loud——否则后续 patch 层
+ * 强制启用或组合回归把 Replacement 误送进 apply 时将无人拦截。
  */
 function assertGateBackstop(ctx: Context): void {
   const loader = (ctx.get as (name: string) => unknown)('loader') as { internal?: LoaderInternalLike } | undefined
   const current = (ctx as { fiber?: { entry?: FiberEntryLike } }).fiber?.entry
-  if (loader === undefined || loader.internal === undefined || current === undefined) return
+  if (loader === undefined && current === undefined) return
+  if (loader === undefined) {
+    throw new Error('dsh-skip-browser-auth: gate backstop unavailable: loader service is missing')
+  }
+  if (loader.internal === undefined) {
+    throw new Error('dsh-skip-browser-auth: gate backstop unavailable: loader internal resolver is missing')
+  }
+  if (current === undefined) {
+    throw new Error('dsh-skip-browser-auth: gate backstop unavailable: current loader entry is missing')
+  }
 
   // (a) 版本断言：与官方 row 同一解析锚点（loader.internal），读 manifest 比对白名单。
   const baseUrl = (ctx as { baseUrl?: string }).baseUrl ?? ''

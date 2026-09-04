@@ -185,3 +185,37 @@ test('missing loader service and fiber entry skips the backstop', async () => {
   await apply(ctx, { trustedHosts: [] }) // 无 loader、无 fiber entry：不抛
   assert.equal(routes.length, 1)
 })
+
+test('backstop negative: loader present but internal resolver missing fails loud', async () => {
+  const { ctx, routes } = makeContext()
+  const { self } = fakeSelfWithRow()
+  ctx.provide('loader', {}) // loader 服务在，internal 解析器缺失
+  ctx.fiber = { entry: self }
+  await assert.rejects(apply(ctx, {}), /gate backstop unavailable: loader internal resolver is missing/)
+  assert.equal(routes.length, 0) // 失败必须发生在注册 /api 之前
+})
+
+test('backstop negative: loader present but current entry missing fails loud', async () => {
+  const { ctx, routes } = makeContext()
+  ctx.provide('loader', fakeLoader('file:///unused/package.json'))
+  // 未设置 ctx.fiber：产品上下文缺当前 entry 绑定
+  await assert.rejects(apply(ctx, {}), /gate backstop unavailable: current loader entry is missing/)
+  assert.equal(routes.length, 0)
+})
+
+test('backstop failure fires before service creation, route registration, and warning', async () => {
+  const { ctx, routes } = makeContext()
+  const { self } = fakeSelfWithRow()
+  ctx.provide('loader', {}) // internal 缺失
+  ctx.fiber = { entry: self }
+  const warnings = []
+  const original = console.warn
+  console.warn = (msg) => { warnings.push(msg) }
+  try {
+    await assert.rejects(apply(ctx, {}), /gate backstop unavailable/)
+  } finally {
+    console.warn = original
+  }
+  assert.equal(routes.length, 0)
+  assert.equal(warnings.length, 0)
+})
