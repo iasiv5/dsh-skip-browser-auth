@@ -19,11 +19,15 @@ cookie，保护全部 Host API 与 Remote WebSocket。本插件安装后在任�
 - 激活后由本插件提供 trusted-network（可信网络）等效 Connection：复用官方导出的
   `HostConnectionService`，以三方法 stub（trusted-network 语义）替代 BrowserAuth，
   `/api` 路由、请求体上限、image capacity 断言照抄官方 apply 语义。
-- 任一门控条件不成立（探针失败、行不存在、名字漂移、后续 patch 层强制禁用官方行）
-  → 插件保持 dormant（休眠）：官方行为分毫不变，插件不注册路由、不提供服务、
-  不加载浏览器 bundle。
+- 任一门控条件不成立（探针为假、行不存在、名字漂移、官方行未禁用）→ 插件保持
+  dormant（休眠）：官方行为分毫不变，插件不注册路由、不提供服务、不加载浏览器
+  bundle。注意：在探针为假（非白名单版本）时，即使后续 patch 层把官方行强制设为
+  `disabled: true`，行绑定内嵌的版本探针仍会阻止 Replacement 激活。
 - `apply()` 内另有 backstop（最后防线）：读官方 manifest 比对白名单、校验行绑定
-  状态，任一不满足即 fail loud 拒绝运行。
+  状态，任一不满足即 fail loud 拒绝运行；产品上下文中 loader / internal /
+  当前 entry 任一缺失（最后防线无法执行）同样 fail loud。
+
+本插件包含或移植 DeepSeek Harness 的 MIT 许可代码，详见 LICENSE。
 
 ## 安全警告
 
@@ -59,7 +63,9 @@ sudo systemctl restart deepseek-harness.service
 
 - 唯一白名单版本：字符串精确值 `'0.1.2-rc.1'`。禁止 `>=`、范围、`latest` 判断；
   探测失败一律 fail-closed 到 dormant。
-- 升级 DSH 后本插件自动回到 dormant（官方行为分毫不变），不影响使用。
+- 升级后 `@deepseek-ai/dsh-client-connection` 版本不在精确白名单内时，本插件
+  自动回到 dormant（官方行为分毫不变），不影响使用；升级到白名单版本
+  （`0.1.2-rc.1`）则会激活。
 - 新版本需要逐个测试验证后把精确版本加入白名单（`src/gate.ts` 的
   `GATE_VERSION` 与白名单判断、`src/index.ts` backstop 的白名单文案）；
   无法安全跟随时对插件做版本分叉。
@@ -72,7 +78,8 @@ sudo systemctl restart deepseek-harness.service
 | rc.1 + 探针假（如 9.9.9 段） | 活跃 | dormant | 官方 BrowserAuth 照常（401/cookie 换取） |
 | rc.2（0.1.1-rc.2，真实产物） | 活跃（rc.2 无 BrowserAuth） | dormant | 官方 rc.2 基线：`GET /` 200、`/api` 无认证层 |
 | 官方行名字漂移 | 活跃（patch 被 name-guard 跳过） | dormant | 官方行为，无冲突 |
-| 后续 patch 层强制禁用官方行 | `disabled: true` | dormant（行绑定内探针拦截） | 无 Connection 服务（无身份层也无替代） |
+| 非白名单版本 + 后续 patch 层强制禁用官方行 | `disabled: true`（探针仍为假） | dormant（行绑定内嵌探针拦截） | 无 Connection 服务（无身份层也无替代） |
+| 白名单 rc.1 + 后续 patch 层强制禁用官方行 | `disabled: true`（与本插件自身禁用一致） | 激活（行绑定要求的正是官方行已禁用） | Replacement 照常激活 |
 | 路径段真、manifest 版本漂移 | 禁用 | 进入 apply 后被 backstop 拒绝 | fail loud：whitelist 诊断，`loader.await()` reject |
 
 ## 测试说明

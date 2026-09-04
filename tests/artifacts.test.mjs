@@ -11,3 +11,13 @@ test('client artifact keeps the wrapper shape and carries only the new registrat
   assert.equal(client.includes('id: "@deepseek-ai/dsh-client-connection"'), false)
   assert.equal(client.includes('return module.exports'), true)
 })
+
+test('distribution view carries the upstream MIT license notice', () => {
+  // 发布包完整复制官方 client bundle 并移植 substantial source，
+  // 上游 MIT 的版权与许可声明必须随分发保留。
+  const license = readFileSync(new URL('../LICENSE', import.meta.url), 'utf8')
+  assert.ok(license.includes('Copyright (c) 2026 DeepSeek'))
+  assert.ok(license.includes('Permission is hereby granted'))
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  assert.ok(manifest.files.includes('LICENSE'))
+})

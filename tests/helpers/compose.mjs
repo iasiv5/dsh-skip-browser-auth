@@ -102,14 +102,21 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
 
   const context = new Context()
   context.baseUrl = pathToFileURL(root).href + '/'
+  // 幂等 dispose：用例内显式调用与 teardown 兜底共用同一次执行。
+  // dispose 失败必须让测试失败（生命周期清理是该插件的重要正确性属性），
+  // 但临时目录始终清理。
+  let disposed = false
+  const dispose = async () => {
+    if (disposed) return
+    disposed = true
+    await context.fiber?.dispose()
+  }
   t.after(async () => {
     try {
-      await context.fiber?.dispose()
-    } catch (error) {
-      // 清理阶段尽力而为：组合断言失败时不让 dispose 二次错误掩盖原始失败。
-      console.warn(`compose teardown: fiber dispose failed: ${String(error)}`)
+      await dispose()
+    } finally {
+      await rm(root, { recursive: true, force: true })
     }
-    await rm(root, { recursive: true, force: true })
   })
   context.provide('webRuntime', webRuntime ?? { lanAddresses: [], trustedHosts: [] })
   await context.plugin(Loader)
@@ -140,5 +147,5 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
     config: { path: pathToFileURL(configPath).href, patches: patchList },
   })
   await context.loader.await()
-  return { context, port: context.webServer.port, root }
+  return { context, port: context.webServer.port, root, dispose }
 }

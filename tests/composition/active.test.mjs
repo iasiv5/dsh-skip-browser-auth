@@ -74,3 +74,24 @@ test('active: Replacement serves trusted-network behavior with the official row 
   const credContent = existsSync(credPath) ? readFileSync(credPath, 'utf8') : ''
   assert.equal(credContent.includes('browser-session'), false)
 })
+
+test('active: disposing the composition tears down the served surface', async (t) => {
+  const { port, dispose } = await compose(t, {
+    probeVersion: '0.1.2-rc.1',
+    webRuntime: { lanAddresses: [], trustedHosts: ['app.internal'] },
+    rows: [
+      { name: '@deepseek-ai/dsh-host-webserver', config: { host: '127.0.0.1', port: 0 } },
+      { id: 'frontend', name: '@deepseek-ai/dsh-host-frontend-static', config: { distIndex: '{{ROOT}}/dist/index.html' } },
+      { id: 'connection', name: '@deepseek-ai/dsh-client-connection' },
+    ],
+  })
+
+  // dispose 前路由可达
+  const before = await rawRequest(port, { path: '/' })
+  assert.equal(before.status, 200)
+
+  // dispose 后监听已撤销：连接被拒绝（webserver 与 Replacement 同 fiber 生命周期）
+  await dispose()
+  await new Promise(resolve => setTimeout(resolve, 100))
+  await assert.rejects(rawRequest(port, { path: '/' }))
+})

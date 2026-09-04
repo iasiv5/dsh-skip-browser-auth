@@ -16,13 +16,14 @@ import { dirname, join } from 'node:path'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 
-// npm run 会把父 npm 的配置以 npm_config_* 环境变量注入子进程；子 npm 将其中的
-// allow-scripts 视为「CLI 传入的 --allow-scripts」并按 project-scoped 安装策略
-// 直接拒绝（EALLOWSCRIPTS）。剥离这批注入，让子 npm 改从 .npmrc 文件读配置
-// （registry 等用户配置不受影响）。
+// npm run 会把父 npm 的配置以 npm_config_* 环境变量注入子进程；其中的
+// allow-scripts 会被子 npm 视为「CLI 传入的 --allow-scripts」并按
+// project-scoped 安装策略直接拒绝（EALLOWSCRIPTS）。只删除这一个确证冲突键
+// （两种大小写形态），其余 npm_config_*（registry、proxy、CA、userconfig 等）
+// 原样保留，避免破坏 CI/企业环境注入的配置。
 const childEnv = { ...process.env }
-for (const key of Object.keys(childEnv)) {
-  if (/^npm_config_/i.test(key)) delete childEnv[key]
+for (const key of ['npm_config_allow_scripts', 'NPM_CONFIG_ALLOW_SCRIPTS']) {
+  delete childEnv[key]
 }
 
 execFileSync('npm', [
