@@ -13,6 +13,9 @@
 name: publish
 
 on:
+  push:
+    tags:
+      - 'v*' # 推送 v* tag 即触发（服务端无法调 GitHub Release API 时的发布通道）
   release:
     types: [published]
   workflow_dispatch:

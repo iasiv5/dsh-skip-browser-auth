@@ -1,6 +1,6 @@
 {
   "name": "@iasiv5/dsh-skip-browser-auth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "个人自用：在 DSH 0.1.2-rc.1 上跳过 BrowserAuth 的 trusted-network Connection 替换插件",
   "license": "MIT",
   "type": "module",
