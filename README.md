@@ -1,8 +1,26 @@
 # @iasiv5/dsh-skip-browser-auth
 
+[![Release](https://img.shields.io/github/v/tag/iasiv5/dsh-skip-browser-auth?label=Release&color=blue)](https://github.com/iasiv5/dsh-skip-browser-auth/releases)
+[![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skip-browser-auth?color=orange)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
+[![Registry Check](https://img.shields.io/badge/Registry_Check-passing-green)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
+[![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
+[![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.1--rc.2_verified-blue)](#兼容版本)
+
 个人自用的 DSH Web 插件：在兼容版本上替换官方 Connection 提供方，跳过 DSH 官方
 BrowserAuth 浏览器身份层，同时完整保留请求信任栅栏（request trust fence）。
 不修改 DSH 本体，不创建任何新的监听服务或端口。
+
+## 兼容版本
+
+**当前生效的兼容版本只有一个**（白名单为精确版本匹配，不含范围）：
+
+| DSH 版本（`@deepseek-ai/dsh-client-connection`） | 兼容日期 | 状态 |
+| --- | --- | --- |
+| `0.1.2-rc.1` | 2026-09-05 | ✅ 唯一激活版本：Replacement 生效（trusted-network；active 实机清单待 DSH 升级后执行） |
+| 其他所有版本（含 `0.1.1-rc.2`） | — | dormant：官方行为分毫不变 |
+
+后续新版本经测试验证兼容后，将作为新行加入本表；不在表内的版本一律 dormant，
+安装本身在任何 DSH 版本上都成功。
 
 ## 这是什么
 
