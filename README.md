@@ -136,6 +136,17 @@ npm run test:all
 `dsh --profile web --dump-config` 出现 `trusted-connection` 行（仅作安装证据，
 不作为未激活证明）；卸载后该行消失、bundles 中无本插件。回滚未被触发。
 
+### scoped rename 后重新验证（2026-09-05，`@iasiv5/dsh-skip-browser-auth@0.1.0`）
+
+包名改为 scoped 后按同一协议重新执行（安装 `/home/ubuntu/workspace/dsh-skip-browser-auth`
+→ 重启 → 对照 → `dsh plugin --profile web remove @iasiv5/dsh-skip-browser-auth`
+→ 重启 → 复验）：安装证据为 bundles 出现 `@iasiv5/dsh-skip-browser-auth`、
+dump-config 第 612 行 `trusted-connection` 行（行名 `@iasiv5/dsh-skip-browser-auth`）；
+三组行为文件逐字节 diff 均为空（`root 200 text/html`、`api 200 application/json`、
+`type=server-response` / `rpcId=probe` / `resultOk=true`、authCount=0）；
+安装后与卸载后 journal 均无固定警告、无 err 级日志；scoped 卸载无残留；
+回滚未被触发。本节替代首次记录，作为 scoped 包身份的实机 dormant 结论。
+
 ## 升级到 0.1.2-rc.1 后的 active 验证清单
 
 DSH 升级到 `0.1.2-rc.1` 并安装本插件、重启后，依次执行：
