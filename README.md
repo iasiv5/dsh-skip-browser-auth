@@ -46,11 +46,15 @@ trusted-network mode 的判据只有一个：**请求来源是否通过信任栅
 ## 安装与卸载
 
 ```sh
-# 安装（任何 DSH 版本都可安装；非 0.1.2-rc.1 上自动 dormant）
-dsh plugin --profile web add /path/to/@iasiv5/dsh-skip-browser-auth
+# 从本地 checkout 安装（scope 是包名的一部分，不是目录路径）
+dsh plugin --profile web add /path/to/dsh-skip-browser-auth
+
+# 发布 npm 后，从 registry 安装
+dsh plugin --profile web add @iasiv5/dsh-skip-browser-auth
+
 sudo systemctl restart deepseek-harness.service
 
-# 卸载（恢复官方行为）
+# 卸载（恢复官方行为；统一使用 manifest 包名）
 dsh plugin --profile web remove @iasiv5/dsh-skip-browser-auth
 sudo systemctl restart deepseek-harness.service
 ```
@@ -92,9 +96,10 @@ npm run test:all
 - `test:rc2-fixture` 需要 npm 网络访问：以别名安装 rc.2 dormant 组合所需产物。
   `--no-save` 会改动 `node_modules`（以及为满足 rc.2 peer 链所需的嵌套安装），
   但不改 package manifest 与 lockfile（脚本内以 `git diff` 证明）。
-- 本机 npm 11.19 的 allow-scripts 策略与 project-scoped 安装存在两处适配
-  （`--ignore-scripts`、`--force` 取代 `--legacy-peer-deps`、剥离
-  `npm_config_*` 环境注入），详见 `scripts/install-rc2-fixture.mjs` 头注释。
+- 本机 npm 11.19 的 allow-scripts 策略与 project-scoped 安装存在三处适配
+  （`--ignore-scripts`、`--force` 取代 `--legacy-peer-deps`、仅剥离
+  `npm_config_allow_scripts` / `NPM_CONFIG_ALLOW_SCRIPTS` 两个确证冲突键），
+  详见 `scripts/install-rc2-fixture.mjs` 头注释。
 - 组合测试（`tests/composition/`）用真实 Loader + Include + 真实官方产物端到端
   覆盖 active / gate-false / 真实 rc.2 dormant / gate 绑定负向四条路径；探针
   fixture 是真实文件（临时目录内构造 pnpm 风格路径段 + manifest）。

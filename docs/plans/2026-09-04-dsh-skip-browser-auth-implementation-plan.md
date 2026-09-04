@@ -435,3 +435,27 @@
 ## 审阅 Checkpoint
 
 - 实施计划已按三轮评审意见修订（v3.1）并保存到 `docs/plans/2026-09-04-dsh-skip-browser-auth-implementation-plan.md`。请先确认这份计划；如果没问题，下一步可以按计划由普通编码 agent 或人工继续执行。
+
+## 执行后经授权偏差与勘误（2026-09-05，评审两轮后沉淀）
+
+以下变更均已获用户/评审授权并已在实现中落地；正文其余部分保留为历史记录，
+与本文冲突时以本节为准。
+
+1. **包名变更（用户授权，为发布准备）**：包名由 `dsh-skip-browser-auth` 改为
+   `@iasiv5/dsh-skip-browser-auth`。client registration id、inserted row name、
+   plugin name、`/api` effect label、日志与错误前缀统一使用 scoped 名称。
+2. **固定警告文案随之修订（原全局约束的授权修订）**：现为逐字
+   `@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.`
+3. **Task 6 backstop 跳过条文勘误（评审一轮 🔴-1）**：跳过仅限「loader 与
+   current entry 同时缺失」的纯手搭测试上下文；产品上下文中 loader /
+   `loader.internal` / current entry 任一单边缺失，都必须在创建
+   `HostConnectionService`、注册 `/api`、输出警告之前 fail loud。
+4. **Task 9 fixture 安装命令的本机适配（评审一轮 🟡-2 相关）**：`--ignore-scripts`
+   与 `--force` 取代 `--legacy-peer-deps`，子进程仅剥离
+   `npm_config_allow_scripts` / `NPM_CONFIG_ALLOW_SCRIPTS` 两个确证冲突键；
+   依据与影响见 `scripts/install-rc2-fixture.mjs` 头注释。
+5. **Task 11 在 scoped rename 后重新执行**：安装、前后对照与卸载均以
+   `@iasiv5/dsh-skip-browser-auth` 身份重做，结果见 README
+   「实机 dormant 前后对照记录」。
+6. **发布视图补充**：仓库根新增 `LICENSE`（保留上游 DeepSeek MIT 声明）并纳入
+   `files`；pack 断言随之覆盖。
