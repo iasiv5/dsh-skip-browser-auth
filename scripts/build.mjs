@@ -1,8 +1,6 @@
-// 构建脚本（Task 1 范围）：
-//   ① tsc 编译 src/ → lib/host.js
-//   ② 官方 client 发布产物不可变 re-ID → lib/client.js
-//   ③ 产物断言
-// Task 7 将在 tsc 之后、client re-ID 之前接入 cordis.patch.yml 生成步骤。
+// 构建脚本：tsc 编译 src/ → lib/host.js；从 lib/gate.js 常量生成
+// cordis.patch.yml；官方 client 发布产物不可变 re-ID → lib/client.js；产物断言。
+// 固定流程：tsc → write-patch → client re-ID。
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -15,6 +13,9 @@ const require = createRequire(import.meta.url)
 // ① tsc 编译 host 半区。通过 Node 调用本地依赖的 tsc，避免 PATH 依赖。
 const tscBin = require.resolve('typescript/bin/tsc')
 execFileSync(process.execPath, [tscBin, '-p', 'tsconfig.json'], { cwd: root, stdio: 'inherit' })
+
+// ①.5 生成 cordis.patch.yml（Task 7 接入）：依赖 tsc 产出的 lib/gate.js 常量。
+execFileSync(process.execPath, [join(root, 'scripts', 'write-patch.mjs')], { cwd: root, stdio: 'inherit' })
 
 // 源文件为 src/index.ts（rootDir: src），tsc 产出 lib/index.js；
 // 包契约的主入口是 lib/host.js，这里重命名归位（相对导入同目录，不受影响）。
