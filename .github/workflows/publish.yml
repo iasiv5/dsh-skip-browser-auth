@@ -1,0 +1,34 @@
+# 发布工作流：npm Trusted Publishing（OIDC），无需在 GitHub 配置 npm token。
+#
+# 前置条件（一次性，在 npmjs.com 配置）：
+#   @iasiv5/dsh-skip-browser-auth → Settings → Trusted Publishing → Add publisher：
+#     - Registry: npm
+#     - Organization/Owner: iasiv5
+#     - Repository: dsh-skip-browser-auth
+#     - Workflow filename: publish.yml
+#     - Environment: 留空
+# 配置后，本工作流以 GitHub OIDC 身份（id-token: write）向 npm 交换短时凭据完成
+# 发布，并自动附上 --provenance 来源证明。若尚未配置 Trusted Publishing，
+# 可临时改用 NODE_AUTH_TOKEN secret（store 一个 Granular Token）。
+name: publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # OIDC：npm 可信发布与 --provenance 来源证明所需
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm publish --provenance --access public
