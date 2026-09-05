@@ -58,23 +58,23 @@ export function rawRequest(port, { path, method = 'GET', headers = {}, body } = 
  * @param options.manifestVersion - 探针 connection 锚点 fixture manifest 版本（默认同 probeVersion）。
  * @param options.runtimeVersion - 探针 runtime 锚点（@deepseek-ai/dsh）fixture 版本，
  *   默认同 probeVersion；显式传宿主版本可模拟「插件自带 rc.1 connection + 宿主 rc.2」事故。
+ * @param options.layout - 探针 fixture 布局：'pnpm'（默认，路径段带版本）或
+ *   'npm'（扁平 node_modules，URL 无版本段 → 探针走 manifest 回退，dshm 部署形态）。
  * @param options.extraPatches - 追加在本插件 patch 之后的覆盖层（模拟后续 patch 层）。
  * @param options.webRuntime - 提供给 `ctx.webRuntime` 的服务值。
  * @returns context、服务端口与临时根目录。
  */
-export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, runtimeVersion, extraPatches = [], webRuntime } = {}) {
+export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, runtimeVersion, layout = 'pnpm', extraPatches = [], webRuntime } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'dsh-sba-compose-'))
 
-  // 真实探针 fixture：<root>/gate-fixture/<pnpm 风格路径段>/node_modules/.../package.json。
-  // 双锚点：connection（被替换对象）+ 宿主 runtime 本体（@deepseek-ai/dsh）。
+  // 真实探针 fixture：pnpm 布局为 gate-fixture/<pnpm 风格路径段>/…（段含版本），
+  // npm 布局为 gate-fixture/npm-flat/node_modules/…（URL 无版本段）。双锚点：
+  // connection（被替换对象）+ 宿主 runtime 本体（@deepseek-ai/dsh）。
   async function writeAnchorFixture(pkg, segmentVersion, manifestOverride) {
     const short = pkg.slice(pkg.indexOf('/') + 1)
-    const fixtureDir = join(
-      root,
-      'gate-fixture',
-      `@deepseek-ai+${short}@${segmentVersion}_fixture`,
-      'node_modules', '@deepseek-ai', short,
-    )
+    const fixtureDir = layout === 'npm'
+      ? join(root, 'gate-fixture', 'npm-flat', 'node_modules', '@deepseek-ai', short)
+      : join(root, 'gate-fixture', `@deepseek-ai+${short}@${segmentVersion}_fixture`, 'node_modules', '@deepseek-ai', short)
     await mkdir(fixtureDir, { recursive: true })
     const fixtureFile = join(fixtureDir, 'package.json')
     await writeFile(fixtureFile, JSON.stringify({ name: pkg, version: manifestOverride ?? segmentVersion }))

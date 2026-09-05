@@ -106,11 +106,14 @@ sudo systemctl restart deepseek-harness.service
 | --- | --- | --- | --- |
 | rc.1 + 探针真 + 绑定完好 | `disabled: true`（被 patch 禁用，无 fiber） | `disabled: false`（活跃 fiber） | Replacement 激活：trusted-network 行为 + 固定警告 |
 | rc.1 + 探针假（如 9.9.9 段） | 活跃 | dormant | 官方 BrowserAuth 照常（401/cookie 换取） |
+| rc.1 + npm 扁平布局（无路径段，manifest rc.1，如 dshm 部署） | `disabled: true` | `disabled: false`（manifest 回退确认版本） | Replacement 激活：同第一行 |
+| npm 扁平布局 + 宿主 rc.2（manifest 漂移） | 活跃 | dormant | runtime 锚点 manifest 否决，官方 BrowserAuth 照常 |
 | rc.2（0.1.1-rc.2，真实产物） | 活跃（rc.2 无 BrowserAuth） | dormant | 官方 rc.2 基线：`GET /` 200、`/api` 无认证层 |
 | 官方行名字漂移 | 活跃（patch 被 name-guard 跳过） | dormant | 官方行为，无冲突 |
 | 非白名单版本 + 后续 patch 层强制禁用官方行 | `disabled: true`（探针仍为假） | dormant（行绑定内嵌探针拦截） | 无 Connection 服务（无身份层也无替代） |
 | 白名单 rc.1 + 后续 patch 层强制禁用官方行 | `disabled: true`（与本插件自身禁用一致） | 激活（行绑定要求的正是官方行已禁用） | Replacement 照常激活 |
 | 路径段真、manifest 版本漂移 | 禁用 | 进入 apply 后被 backstop 拒绝 | fail loud：whitelist 诊断，`loader.await()` reject |
+| 段假、盘上 manifest 真版本 | 活跃 | dormant | 段分支短路判否，不读 manifest 救援 |
 
 ## 测试说明
 
@@ -127,15 +130,19 @@ npm run test:all
   `npm_config_allow_scripts` / `NPM_CONFIG_ALLOW_SCRIPTS` 两个确证冲突键），
   详见 `scripts/install-rc2-fixture.mjs` 头注释。
 - 组合测试（`tests/composition/`）用真实 Loader + Include + 真实官方产物端到端
-  覆盖 active / gate-false / 真实 rc.2 dormant / gate 绑定负向四条路径；探针
-  fixture 是真实文件（临时目录内构造 pnpm 风格路径段 + manifest）。
+  覆盖 active / gate-false / 真实 rc.2 dormant / gate 绑定负向 / 事故回归
+  （bundle-rc.1-on-rc.2-host）/ npm 扁平布局 active+dormant 等路径；探针
+  fixture 是真实文件（临时目录内构造 pnpm 路径段或 npm 扁平布局 + manifest）。
 - 测试使用 Node 内置 test runner（无 vitest）。
 
 ## 已知限制
 
-- npm 布局（`node_modules/@deepseek-ai/dsh-client-connection`，路径无版本段）下
-  探针无法确认版本 → 不激活（dormant）。pnpm 布局与真实部署（pnpm store 路径段）
-  可确认版本。
+- npm 布局（`node_modules/@deepseek-ai/dsh-client-connection`，路径无版本段）
+  曾使探针无法确认版本（v0.1.1 在 dshm 部署上永远 dormant）。v0.2.0 起探针对
+  无版本段的 `file:` URL 回退为**同步读 manifest 比对精确版本**
+  （`process.getBuiltinModule('node:fs')`，Node ≥22.3），pnpm 与 npm 两种布局
+  均可确认版本；pnpm 路径段仍是快路径，段真时保留「manifest 漂移由 apply 内
+  backstop 兜底 fail loud」的既有语义。
 - 组合测试的探针 fixture 是受控构造（真实文件但路径段版本可指定），真实布局的
   版本提取由 Task 11 式实机验证与 Task 5 的 pnpm 真实路径断言兜底。
 - 完整浏览器组图 e2e（client-modules 组图、浏览器半区真实加载）未覆盖；

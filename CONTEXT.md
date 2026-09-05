@@ -25,7 +25,7 @@ Replacement 是否激活由组合期的版本探针决定，而不是安装器�
 _Avoid_: 运行时检测、自动适配
 
 **activation probe（激活探针）**:
-自门控使用的判据：从已解析的目标包路径中提取精确版本，并与白名单比对。版本可确认且在白名单内才激活；无法确认版本即视为不在白名单。解析锚点是宿主 runtime 本体（`@deepseek-ai/dsh`，只可能来自 runtime fallback）加官方 connection 包双锚点——绝不允许锚定到插件自身依赖可能提供的副本（2026-09-05 事故根因）。
+自门控使用的判据：从已解析的目标包路径中确认精确版本，并与白名单比对。版本可确认且在白名单内才激活；无法确认版本即视为不在白名单。解析锚点是宿主 runtime 本体（`@deepseek-ai/dsh`，只可能来自 runtime fallback）加官方 connection 包双锚点——绝不允许锚定到插件自身依赖可能提供的副本（2026-09-05 事故根因）。版本确认双分支：pnpm store 路径段为快路径（段真时保留「manifest 漂移由 backstop 兜底」语义）；无版本段的 `file:` URL 同步读 manifest 比对（npm 扁平布局/dshm 部署）。
 _Avoid_: capability probe（泛称）、结构探测、版本检测
 
 **whitelist（版本白名单）**:

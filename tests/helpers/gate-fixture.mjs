@@ -1,19 +1,21 @@
-// 门控双锚点 fixture helper：在真实临时目录按 pnpm store 布局写出探针的
-// 两个锚点包（runtime 本体 @deepseek-ai/dsh + 官方 connection），并提供按
-// specifier 分发的 resolveSync fake。路径段版本与 manifest 版本可分别控制
-// （覆盖「路径真、manifest 假」漂移）；默认两者一致。
+// 门控双锚点 fixture helper：在真实临时目录写出探针的两个锚点包
+// （runtime 本体 @deepseek-ai/dsh + 官方 connection），并提供按 specifier
+// 分发的 resolveSync fake。支持两种布局：
+//  - pnpm（默认）：`<root>/@scope+name@SEG_h/node_modules/@scope/name/`，
+//    路径段版本与 manifest 版本可分别控制（覆盖「路径真、manifest 假」漂移）；
+//  - npm：`<root>/npm-flat/node_modules/@scope/name/`，URL 无版本段，
+//    探针必须走 manifest 回退分支（dshm 部署形态）。
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { GATE_ANCHOR_PACKAGES } from '../../lib/gate.js'
 
-/**
- * Write one pnpm-style package fixture: `<root>/@scope+name@SEG_h/node_modules/@scope/name/package.json`.
- */
-async function writePackageFixture(root, pkg, { segmentVersion, manifestVersion }) {
+async function writePackageFixture(root, pkg, { segmentVersion, manifestVersion, layout }) {
   const short = pkg.slice(pkg.indexOf('/') + 1)
-  const dir = join(root, `@deepseek-ai+${short}@${segmentVersion}_t`, 'node_modules', '@deepseek-ai', short)
+  const dir = layout === 'npm'
+    ? join(root, 'npm-flat', 'node_modules', '@deepseek-ai', short)
+    : join(root, `@deepseek-ai+${short}@${segmentVersion}_t`, 'node_modules', '@deepseek-ai', short)
   await mkdir(dir, { recursive: true })
   const file = join(dir, 'package.json')
   await writeFile(file, JSON.stringify({ name: pkg, version: manifestVersion }))
@@ -21,13 +23,16 @@ async function writePackageFixture(root, pkg, { segmentVersion, manifestVersion 
 }
 
 /**
- * 写出全部门控锚点的 fixture，返回 `t`-登记的清理句柄与按包名索引的 url 表。
+ * 写出全部门控锚点的 fixture，返回 `t`-登记的清理句柄与按 specifier 索引的
+ * url 表。
  * @param options 默认 `runtimeVersion = connectionVersion = GATE 版本`；
- *   每个 `*Version` 可再传 `{ segment, manifest }` 分别控制路径段与 manifest。
+ *   每个 `*Version` 可再传 `{ segment, manifest }` 分别控制路径段与 manifest
+ *   （segment 仅 pnpm 布局生效）；`layout: 'npm'` 切换 npm 扁平布局。
  */
 export async function writeGateFixtures(t, {
   runtimeVersion,
   connectionVersion,
+  layout = 'pnpm',
 } = {}) {
   const tmp = await mkdtemp(join(tmpdir(), 'dsh-sba-gate-'))
   const normalize = (version, fallback) => {
@@ -37,8 +42,8 @@ export async function writeGateFixtures(t, {
       : { segmentVersion: base, manifestVersion: base }
   }
   const [runtime, connection] = await Promise.all([
-    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[0], normalize(runtimeVersion, '0.1.2-rc.1')),
-    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[1], normalize(connectionVersion, '0.1.2-rc.1')),
+    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[0], { ...normalize(runtimeVersion, '0.1.2-rc.1'), layout }),
+    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[1], { ...normalize(connectionVersion, '0.1.2-rc.1'), layout }),
   ])
   const urls = {
     [`${GATE_ANCHOR_PACKAGES[0]}/package.json`]: runtime.url,

@@ -103,7 +103,7 @@ test('probe rejects manifest drift under a whitelisted path segment', async (t) 
   const { urls } = await writeGateFixtures(t, {
     runtimeVersion: { segment: GATE_VERSION, manifest: '9.9.9' },
   })
-  // 路径段全对、runtime manifest 漂移：探针（只读路径段）仍放行；
+  // 路径段全对、runtime manifest 漂移：段分支短路放行（不读 manifest）；
   // 该漂移由 apply 内 backstop 读 manifest 兜底（见 host-apply.test.mjs）。
   assert.equal(evaluateWith(probeCtx(urls), GATE_PROBE_EXPRESSION), true)
   const connectionManifestDrift = await writeGateFixtures(t, {
@@ -112,11 +112,73 @@ test('probe rejects manifest drift under a whitelisted path segment', async (t) 
   assert.equal(evaluateWith(probeCtx(connectionManifestDrift.urls), GATE_PROBE_EXPRESSION), true)
 })
 
-test('probe rejects an npm layout without a version segment', async (t) => {
+test('probe rejects an npm layout without a version segment (non-file URLs, nothing to read)', async (t) => {
   const urls = {
     [`${GATE_RUNTIME_PACKAGE}/package.json`]: 'file:///repo/node_modules/@deepseek-ai/dsh/package.json',
     [`${CONNECTION_PACKAGE}/package.json`]: 'file:///repo/node_modules/@deepseek-ai/dsh-client-connection/package.json',
   }
+  assert.equal(evaluateWith(probeCtx(urls), GATE_PROBE_EXPRESSION), false)
+})
+
+test('probe accepts npm flat layouts via the manifest fallback (dshm deployments)', async (t) => {
+  // dshm 以 npm 语义落地：真实目录、URL 无版本段、manifest 版本 0.1.2-rc.1。
+  const { urls } = await writeGateFixtures(t, { layout: 'npm' })
+  assert.equal(evaluateWith(probeCtx(urls), GATE_PROBE_EXPRESSION), true)
+  assert.equal(evaluateGate(probeCtx(urls)), true)
+})
+
+test('probe rejects npm flat layouts whose manifests drift off the whitelist', async (t) => {
+  // npm 布局下的事故形态：宿主 rc.2 + 连接 rc.1 → runtime 锚点否决。
+  const oldHost = await writeGateFixtures(t, {
+    layout: 'npm',
+    runtimeVersion: '0.1.1-rc.2',
+    connectionVersion: GATE_VERSION,
+  })
+  assert.equal(evaluateWith(probeCtx(oldHost.urls), GATE_PROBE_EXPRESSION), false)
+  // 连接锚点漂移同理。
+  const drifted = await writeGateFixtures(t, {
+    layout: 'npm',
+    runtimeVersion: GATE_VERSION,
+    connectionVersion: '9.9.9',
+  })
+  assert.equal(evaluateWith(probeCtx(drifted.urls), GATE_PROBE_EXPRESSION), false)
+})
+
+test('probe manifest fallback fails closed on unreadable or malformed manifests', async (t) => {
+  const { writeFile } = await import('node:fs/promises')
+  const runtimeKey = `${GATE_RUNTIME_PACKAGE}/package.json`
+  const connectionKey = `${CONNECTION_PACKAGE}/package.json`
+  // 指向不存在的文件：readFileSync 抛出 → dormant。
+  const missing = await writeGateFixtures(t, { layout: 'npm' })
+  const missingUrls = {
+    [runtimeKey]: `${missing.tmp}/npm-flat/absent/@deepseek-ai/dsh/package.json`,
+    [connectionKey]: missing.urls[connectionKey],
+  }
+  assert.equal(evaluateWith(probeCtx(missingUrls), GATE_PROBE_EXPRESSION), false)
+  // manifest 是非法 JSON：JSON.parse 抛出 → dormant。
+  const malformed = await writeGateFixtures(t, { layout: 'npm' })
+  await writeFile(`${malformed.tmp}/npm-flat/node_modules/@deepseek-ai/dsh/package.json`, '{not json', 'utf8')
+  assert.equal(evaluateWith(probeCtx(malformed.urls), GATE_PROBE_EXPRESSION), false)
+})
+
+test('probe manifest fallback requires process.getBuiltinModule (fail-closed without it)', async (t) => {
+  const { urls } = await writeGateFixtures(t, { layout: 'npm' })
+  const original = process.getBuiltinModule
+  try {
+    // 模拟 Node <22.3：getBuiltinModule 不可用 → 无法同步读 manifest → dormant。
+    delete process.getBuiltinModule
+    assert.equal(evaluateWith(probeCtx(urls), GATE_PROBE_EXPRESSION), false)
+  } finally {
+    process.getBuiltinModule = original
+  }
+})
+
+test('probe keeps the documented path-segment precedence: segment mismatch is not rescued by the manifest', async (t) => {
+  // pnpm 段 9.9.9、盘上 manifest 是白名单版本：段分支短路判否，不读 manifest
+  // 救援（与 README 行为矩阵一致：manifest 漂移只在段真时由 backstop 兜底）。
+  const { urls } = await writeGateFixtures(t, {
+    connectionVersion: { segment: '9.9.9', manifest: GATE_VERSION },
+  })
   assert.equal(evaluateWith(probeCtx(urls), GATE_PROBE_EXPRESSION), false)
 })
 

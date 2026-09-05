@@ -15,16 +15,27 @@
  * 「自我满足」，在不兼容宿主上误激活（正是本次事故）。因此：
  *  1. 第一锚点是 `@deepseek-ai/dsh/package.json`（runtime 应用包本体）。
  *     它只可能来自 runtime fallback，不可能被任何 profile 插件的依赖
- *     抬升污染；其版本段即宿主 runtime 版本。
+ *     抬升污染；其版本即宿主 runtime 版本。
  *  2. 第二锚点仍是官方 connection 包（被替换对象本体）；双锚点必须同时
  *     命中白名单版本，任一解析失败或版本漂移一律 dormant。
  * 配套必要条件：本插件的 dependencies 不得声明任何 `@deepseek-ai` 运行时
  * 包（connection 仅作 devDependency 供编译期类型与构建锚点），由
  * tests/manifest.test.mjs 作为不变量看护。
+ *
+ * 单锚点版本判定（2026-09-05 第二修正，npm 扁平布局）：
+ *  1. pnpm store 路径段（快路径）：URL 含 `+包名@版本[_/]` 段即取段值。
+ *     保留既有文档化行为——「段真、manifest 版本漂移」时探针仍放行，
+ *     由 apply 内 backstop 读 manifest 兜底 fail loud。
+ *  2. manifest 回退：URL 为 `file:` 且无版本段（npm 扁平布局，如 dshm
+ *     安装）时，经 `process.getBuiltinModule('node:fs'/'node:url')` 同步读
+ *     manifest 比对精确版本（Node ≥22.3，插件 engines 覆盖；`!!js` 求值
+ *     环境无 require/模块导入，这是唯一受支持的同步内建模块获取方式）。
+ * 两分支都拿不到精确版本 → dormant。任何异常一律 dormant（组合期绝不
+ * fail loud；最后防线在 apply 内 backstop）。
  */
 
 export const CONNECTION_PACKAGE = '@deepseek-ai/dsh-client-connection'
-/** 宿主 runtime 本体包：探针的第一锚点，版本段即宿主 dsh 版本。 */
+/** 宿主 runtime 本体包：探针的第一锚点，版本即宿主 dsh 版本。 */
 export const GATE_RUNTIME_PACKAGE = '@deepseek-ai/dsh'
 export const GATE_VERSION = '0.1.2-rc.1'
 /** 探针锚点（顺序即求值顺序）：宿主 runtime 本体在前，被替换对象在后。 */
@@ -33,7 +44,7 @@ export const GATE_ANCHOR_PACKAGES = [GATE_RUNTIME_PACKAGE, CONNECTION_PACKAGE] a
 /**
  * 从已解析 URL 提取 pnpm store 版本段的正则源（`+name@VER_` / `+name@VER/`）。
  * 探针表达式内嵌的正则由此单一实现生成；仅匹配 pnpm 布局，非 pnpm 布局
- * （提取不到版本段）按不在白名单处理（fail-closed）。
+ * 落入 manifest 回退分支。
  */
 export function versionSegmentPatternSource(pkg: string): string {
   const shortName = pkg.slice(pkg.indexOf('/') + 1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -44,8 +55,9 @@ export function versionSegmentPatternSource(pkg: string): string {
 const GATE_ANCHOR_TABLE = GATE_ANCHOR_PACKAGES.map((pkg) => [pkg, versionSegmentPatternSource(pkg)])
 
 // 版本探针：单行；生成 cordis.patch.yml 官方行 disabled（scripts/write-patch.mjs）。
-// 逐锚点解析 `锚点包/package.json`，版本段全部等于 GATE_VERSION 才放行。
-export const GATE_PROBE_EXPRESSION = `(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return false; const anchors = ${JSON.stringify(GATE_ANCHOR_TABLE)}; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + '/package.json'; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return false; } if (typeof url !== 'string') return false; const match = decodeURIComponent(url).match(new RegExp(patternSource)); if (match === null || match[1] !== '${GATE_VERSION}') return false; } return true; } catch (gateError) { return false; } })()`
+// 逐锚点解析 `锚点包/package.json`，版本（路径段快路径或 manifest 回退）全部
+// 精确等于 GATE_VERSION 才放行。
+export const GATE_PROBE_EXPRESSION = `(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return false; const versionOfUrl = (url, patternSource) => { if (typeof url !== 'string') return null; const decoded = decodeURIComponent(url); const segmented = decoded.match(new RegExp(patternSource)); if (segmented !== null) return segmented[1]; if (decoded.slice(0, 5) === 'file:') { const processRef = globalThis.process; if (processRef === null || typeof processRef !== 'object' || typeof processRef.getBuiltinModule !== 'function') return null; const fsModule = processRef.getBuiltinModule('node:fs'); const urlModule = processRef.getBuiltinModule('node:url'); if (!fsModule || typeof fsModule.readFileSync !== 'function' || !urlModule || typeof urlModule.fileURLToPath !== 'function') return null; const manifest = JSON.parse(fsModule.readFileSync(urlModule.fileURLToPath(url), 'utf8')); return manifest !== null && typeof manifest === 'object' && typeof manifest.version === 'string' ? manifest.version : null; } return null; }; const anchors = ${JSON.stringify(GATE_ANCHOR_TABLE)}; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + '/package.json'; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return false; } let anchorVersion; try { anchorVersion = versionOfUrl(url, patternSource); } catch (gateError) { return false; } if (anchorVersion !== '${GATE_VERSION}') return false; } return true; } catch (gateError) { return false; } })()`
 // 行绑定放行：自身探针为真 + 同组 sibling 存在且名字匹配且其 effective disabled 为真。
 // sibling 必须从当前 entry（Symbol.for('cordis.entry')）所属子树解析，
 // 根 Loader 的 resolve 看不到 Include 子树内的行。
