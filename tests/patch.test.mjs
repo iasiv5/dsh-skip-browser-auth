@@ -1,17 +1,15 @@
-// cordis.patch.yml 的结构断言与求值行为抽查（计划 Task 7 Step 1）。
+// cordis.patch.yml 的结构断言与求值行为抽查（计划 Task 7 Step 1；
+// 探针双锚点后 fixture 按 specifier 分发两个锚点包）。
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import yaml from 'js-yaml'
 import {
   CONNECTION_PACKAGE,
   GATE_PROBE_EXPRESSION,
   GATE_ROW_ALLOWED_EXPRESSION,
 } from '../lib/gate.js'
+import { writeGateFixtures, dispatchingResolveSync } from './helpers/gate-fixture.mjs'
 
 const ENTRY_KEY = Symbol.for('cordis.entry')
 
@@ -30,27 +28,14 @@ function evaluateWith(ctx, expr) {
   return new Function('ctx', 'expr', 'with (ctx) { return eval(expr) }')(ctx, expr)
 }
 
-async function writeFixture() {
-  const tmp = await mkdtemp(join(tmpdir(), 'dsh-sba-patch-'))
-  const dir = join(
-    tmp,
-    `@deepseek-ai+dsh-client-connection@0.1.2-rc.1_t`,
-    'node_modules', '@deepseek-ai', 'dsh-client-connection',
-  )
-  await mkdir(dir, { recursive: true })
-  const file = join(dir, 'package.json')
-  await writeFile(file, JSON.stringify({ name: CONNECTION_PACKAGE, version: '0.1.2-rc.1' }))
-  return { tmp, url: pathToFileURL(file).href }
-}
-
-function activeRowCtx(official, fixtureUrl) {
+function activeRowCtx(official, urls) {
   const parent = { tree: { resolve: () => official } }
   official.parent = parent
   return {
     baseUrl: 'file:///fake/base/',
     [ENTRY_KEY]: { parent },
     webRuntime: { trustedHosts: ['app.internal'] },
-    loader: { internal: { version: 'v2', resolveSync: () => ({ url: fixtureUrl }) } },
+    loader: { internal: { version: 'v2', resolveSync: dispatchingResolveSync(urls) } },
   }
 }
 
@@ -88,25 +73,39 @@ test('row 2 inserts the plugin row with the negated row gate', () => {
 })
 
 test('active composition: the two rows evaluate exclusively (official disabled, plugin enabled)', async (t) => {
-  const { tmp, url } = await writeFixture()
-  t.after(() => rm(tmp, { recursive: true, force: true }))
+  const { urls } = await writeGateFixtures(t)
   const official = {
     options: { id: 'connection', name: CONNECTION_PACKAGE },
     disabled: true,
   }
-  const ctx = activeRowCtx(official, url)
+  const ctx = activeRowCtx(official, urls)
   assert.equal(evaluateWith(ctx, patchList[0].disabled.__jsExpr), true)
   assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), false)
 })
 
 test('plugin row stays dormant when the official row is not disabled or its name drifts', async (t) => {
-  const { tmp, url } = await writeFixture()
-  t.after(() => rm(tmp, { recursive: true, force: true }))
+  const { urls } = await writeGateFixtures(t)
   const notDisabled = { options: { id: 'connection', name: CONNECTION_PACKAGE }, disabled: false }
-  const ctxA = activeRowCtx(notDisabled, url)
+  const ctxA = activeRowCtx(notDisabled, urls)
   assert.equal(evaluateWith(ctxA, patchList[1].insert[0].disabled.__jsExpr), true)
 
   const wrongName = { options: { id: 'connection', name: '@deepseek-ai/dsh-client-connection-wrong' }, disabled: true }
-  const ctxB = activeRowCtx(wrongName, url)
+  const ctxB = activeRowCtx(wrongName, urls)
   assert.equal(evaluateWith(ctxB, patchList[1].insert[0].disabled.__jsExpr), true)
+})
+
+test('bundled-connection-on-old-host composition keeps both rows dormant (2026-09-05 incident)', async (t) => {
+  // 官方行 disabled 绑定的是探针：connection 锚点虽是真实 rc.1 副本，
+  // runtime 锚点为 rc.2 时官方行必须保持 enabled、插入行保持 disabled。
+  const { urls } = await writeGateFixtures(t, {
+    runtimeVersion: '0.1.1-rc.2',
+    connectionVersion: '0.1.2-rc.1',
+  })
+  const official = {
+    options: { id: 'connection', name: CONNECTION_PACKAGE },
+    disabled: true, // 后续层强制 disabled 也一样
+  }
+  const ctx = activeRowCtx(official, urls)
+  assert.equal(evaluateWith(ctx, patchList[0].disabled.__jsExpr), false)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), true)
 })

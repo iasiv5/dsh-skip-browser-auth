@@ -3,15 +3,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import { apply, inject, Config } from '../lib/host.js'
+import { CONNECTION_PACKAGE, GATE_RUNTIME_PACKAGE } from '../lib/gate.js'
+import { writeGateFixtures, dispatchingResolveSync } from './helpers/gate-fixture.mjs'
 
 const FIXED_WARNING = '@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.'
-const CONNECTION_PACKAGE = '@deepseek-ai/dsh-client-connection'
 
 test('plugin injects only webServer and exports a Config schema', () => {
   assert.deepEqual(inject, ['webServer'])
@@ -58,18 +55,9 @@ function makeContext() {
   return { ctx, routes }
 }
 
-// 在真实临时目录写 backstop fixture：路径段与 manifest 版本可分别控制。
-async function writeFixture({ manifestVersion = '0.1.2-rc.1', pathSegmentVersion = '0.1.2-rc.1' } = {}) {
-  const tmp = await mkdtemp(join(tmpdir(), 'dsh-sba-host-'))
-  const dir = join(
-    tmp,
-    `@deepseek-ai+dsh-client-connection@${pathSegmentVersion}_t`,
-    'node_modules', '@deepseek-ai', 'dsh-client-connection',
-  )
-  await mkdir(dir, { recursive: true })
-  const file = join(dir, 'package.json')
-  await writeFile(file, JSON.stringify({ name: CONNECTION_PACKAGE, version: manifestVersion }))
-  return { tmp, url: pathToFileURL(file).href }
+// fakeLoader：resolveSync 按 specifier 分发到双锚点 fixture。
+function fakeLoader(urls, options = {}) {
+  return { internal: { version: 'v2', resolveSync: dispatchingResolveSync(urls, options) } }
 }
 
 // 构造绑定完好的 fakeSelf/官方行（同组、名字正确、disabled、无活跃 fiber）。
@@ -83,10 +71,6 @@ function fakeSelfWithRow(rowOverrides = {}) {
   const self = { parent: { tree: { resolve: () => row } } }
   row.parent = self.parent
   return { self, row }
-}
-
-function fakeLoader(url) {
-  return { internal: { version: 'v2', resolveSync: () => ({ url }) } }
 }
 
 test('apply registers exactly one /api prefix route', async () => {
@@ -150,32 +134,52 @@ test('insufficient image body capacity rejects with must be at least', async () 
   await assert.rejects(apply(ctx, {}), /must be at least/)
 })
 
-test('backstop negative A: path segment passes but manifest drifts — whitelist fail loud', async (t) => {
-  const { tmp, url } = await writeFixture({ manifestVersion: '9.9.9' })
-  t.after(() => rm(tmp, { recursive: true, force: true }))
+test('backstop negative A: path segment passes but connection manifest drifts — whitelist fail loud', async (t) => {
+  const { urls } = await writeGateFixtures(t, { connectionVersion: { segment: '0.1.2-rc.1', manifest: '9.9.9' } })
   const { ctx } = makeContext()
   const { self } = fakeSelfWithRow()
-  ctx.provide('loader', fakeLoader(url))
+  ctx.provide('loader', fakeLoader(urls))
   ctx.fiber = { entry: self }
   await assert.rejects(apply(ctx, {}), /whitelist/)
+  await assert.rejects(apply(ctx, {}), /dsh-client-connection/)
+})
+
+test('backstop negative A2: path segment passes but runtime manifest drifts — whitelist fail loud', async (t) => {
+  // 事故形态的 backstop 投影：connection manifest 是真实 rc.1，宿主 runtime
+  // 本体 manifest 是 rc.2 —— 白名单断言必须 fail loud。
+  const { urls } = await writeGateFixtures(t, { runtimeVersion: { segment: '0.1.2-rc.1', manifest: '0.1.1-rc.2' } })
+  const { ctx } = makeContext()
+  const { self } = fakeSelfWithRow()
+  ctx.provide('loader', fakeLoader(urls))
+  ctx.fiber = { entry: self }
+  await assert.rejects(apply(ctx, {}), /whitelist/)
+  await assert.rejects(apply(ctx, {}), /@deepseek-ai\/dsh /)
+})
+
+test('backstop negative A3: a gate anchor does not resolve — fail loud before any route', async (t) => {
+  const { urls } = await writeGateFixtures(t)
+  const { ctx } = makeContext()
+  const { self } = fakeSelfWithRow()
+  // runtime 锚点解析不到（fallback 缺失）→ 显式 fail loud。
+  ctx.provide('loader', fakeLoader({ [CONNECTION_PACKAGE]: urls[CONNECTION_PACKAGE] }))
+  ctx.fiber = { entry: self }
+  await assert.rejects(apply(ctx, {}), /gate anchor @deepseek-ai\/dsh did not resolve; whitelist/)
 })
 
 test('backstop negative B: correct manifest but official row not disabled — gate binding', async (t) => {
-  const { tmp, url } = await writeFixture()
-  t.after(() => rm(tmp, { recursive: true, force: true }))
+  const { urls } = await writeGateFixtures(t)
   const { ctx } = makeContext()
   const { self } = fakeSelfWithRow({ disabled: false })
-  ctx.provide('loader', fakeLoader(url))
+  ctx.provide('loader', fakeLoader(urls))
   ctx.fiber = { entry: self }
   await assert.rejects(apply(ctx, {}), /gate binding/)
 })
 
 test('backstop negative B: official row name mismatch — gate binding', async (t) => {
-  const { tmp, url } = await writeFixture()
-  t.after(() => rm(tmp, { recursive: true, force: true }))
+  const { urls } = await writeGateFixtures(t)
   const { ctx } = makeContext()
   const { self } = fakeSelfWithRow({ options: { id: 'connection', name: '@deepseek-ai/dsh-client-connection-wrong' } })
-  ctx.provide('loader', fakeLoader(url))
+  ctx.provide('loader', fakeLoader(urls))
   ctx.fiber = { entry: self }
   await assert.rejects(apply(ctx, {}), /gate binding/)
 })
@@ -195,9 +199,10 @@ test('backstop negative: loader present but internal resolver missing fails loud
   assert.equal(routes.length, 0) // 失败必须发生在注册 /api 之前
 })
 
-test('backstop negative: loader present but current entry missing fails loud', async () => {
+test('backstop negative: loader present but current entry missing fails loud', async (t) => {
   const { ctx, routes } = makeContext()
-  ctx.provide('loader', fakeLoader('file:///unused/package.json'))
+  const { urls } = await writeGateFixtures(t)
+  ctx.provide('loader', fakeLoader(urls))
   // 未设置 ctx.fiber：产品上下文缺当前 entry 绑定
   await assert.rejects(apply(ctx, {}), /gate backstop unavailable: current loader entry is missing/)
   assert.equal(routes.length, 0)

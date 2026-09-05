@@ -1,13 +1,15 @@
 # 本文件由 scripts/write-patch.mjs 从 lib/gate.js 常量机械生成，请勿手改。
 # 自门控 bundle patch：第一行把官方 connection 行的 disabled 绑定到版本探针
-# （仅 @deepseek-ai/dsh-client-connection@0.1.2-rc.1 为真）；第二行插入本插件的
-# trusted-connection 行，其 disabled 为行绑定表达式的否定（行绑定内嵌同一探针）。
-# 任何门控条件不成立（探针为假、行不存在、名字漂移、官方行未禁用），
-# Replacement 一律保持 dormant（fail-closed）。探针为假时，即使后续 patch 层
-# 把官方行强制 disabled，行绑定内嵌探针仍保持 dormant。
+# （双锚点：宿主 runtime 本体 @deepseek-ai/dsh 与官方 connection 包的 pnpm
+# 路径段版本必须同为 0.1.2-rc.1；runtime 锚点只可能来自 runtime fallback，
+# 不会被插件自身依赖污染）；第二行插入本插件的 trusted-connection 行，其
+# disabled 为行绑定表达式的否定（行绑定内嵌同一探针）。
+# 任何门控条件不成立（锚点解析失败、版本漂移、行不存在、名字漂移、
+# 官方行未禁用），Replacement 一律保持 dormant（fail-closed）。探针为假时，
+# 即使后续 patch 层把官方行强制 disabled，行绑定内嵌探针仍保持 dormant。
 - id: connection
   name: '@deepseek-ai/dsh-client-connection'
-  disabled: !!js '(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== ''function'') return false; let url; try { url = internal.version === ''v2'' ? internal.resolveSync(ctx.baseUrl, { specifier: ''@deepseek-ai/dsh-client-connection/package.json'', attributes: {} }).url : internal.resolveSync(''@deepseek-ai/dsh-client-connection/package.json'', ctx.baseUrl, {}).url; } catch (gateError) { return false; } if (typeof url !== ''string'') return false; const match = decodeURIComponent(url).match(/[+]dsh-client-connection@([^/_]+)[_/]/); return match !== null && match[1] === ''0.1.2-rc.1''; } catch (gateError) { return false; } })()'
+  disabled: !!js '(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== ''function'') return false; const anchors = [["@deepseek-ai/dsh","[+]dsh@([^/_]+)[_/]"],["@deepseek-ai/dsh-client-connection","[+]dsh-client-connection@([^/_]+)[_/]"]]; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + ''/package.json''; let url; try { url = internal.version === ''v2'' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return false; } if (typeof url !== ''string'') return false; const match = decodeURIComponent(url).match(new RegExp(patternSource)); if (match === null || match[1] !== ''0.1.2-rc.1'') return false; } return true; } catch (gateError) { return false; } })()'
 - insert:
     - id: trusted-connection
       name: '@iasiv5/dsh-skip-browser-auth'
@@ -16,5 +18,5 @@
       config:
         trustedHosts: !!js ctx.webRuntime.trustedHosts
       disabled: !!js >-
-        !((() => { try { const self = ctx[Symbol.for('cordis.entry')]; if (!self || !self.parent || !self.parent.tree) return false; const official = self.parent.tree.resolve('connection'); if (!official || official.parent !== self.parent) return false; if (official.options.id !== 'connection' || official.options.name !== '@deepseek-ai/dsh-client-connection') return false; const probeAllowed = ((() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return false; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier: '@deepseek-ai/dsh-client-connection/package.json', attributes: {} }).url : internal.resolveSync('@deepseek-ai/dsh-client-connection/package.json', ctx.baseUrl, {}).url; } catch (gateError) { return false; } if (typeof url !== 'string') return false; const match = decodeURIComponent(url).match(/[+]dsh-client-connection@([^/_]+)[_/]/); return match !== null &&
-        match[1] === '0.1.2-rc.1'; } catch (gateError) { return false; } })()); if (probeAllowed !== true) return false; return official.disabled === true; } catch (gateError) { return false; } })())
+        !((() => { try { const self = ctx[Symbol.for('cordis.entry')]; if (!self || !self.parent || !self.parent.tree) return false; const official = self.parent.tree.resolve('connection'); if (!official || official.parent !== self.parent) return false; if (official.options.id !== 'connection' || official.options.name !== '@deepseek-ai/dsh-client-connection') return false; const probeAllowed = ((() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return false; const anchors = [["@deepseek-ai/dsh","[+]dsh@([^/_]+)[_/]"],["@deepseek-ai/dsh-client-connection","[+]dsh-client-connection@([^/_]+)[_/]"]]; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + '/package.json'; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return false; }
+        if (typeof url !== 'string') return false; const match = decodeURIComponent(url).match(new RegExp(patternSource)); if (match === null || match[1] !== '0.1.2-rc.1') return false; } return true; } catch (gateError) { return false; } })()); if (probeAllowed !== true) return false; return official.disabled === true; } catch (gateError) { return false; } })())

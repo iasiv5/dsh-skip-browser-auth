@@ -5,9 +5,9 @@
  * isAuthenticated / authorizeIndex / authenticatedUrl 三个方法，由
  * trusted-auth 的 stub 提供），复刻官方 apply 的 /api 前缀路由、
  * 请求体上限与 image capacity 断言语义，并在启动时输出固定警告。
- * apply 内 backstop 是最后防线：版本白名单（读官方 manifest）与
- * 门控绑定状态（同组官方行确被禁用且无活跃 fiber）任一不满足即
- * fail loud 拒绝运行。
+ * apply 内 backstop 是最后防线：版本白名单（读全部门控锚点的 manifest，
+ * 与探针同源常量）与门控绑定状态（同组官方行确被禁用且无活跃 fiber）
+ * 任一不满足即 fail loud 拒绝运行。
  */
 
 import { readFileSync } from 'node:fs'
@@ -20,7 +20,7 @@ import { HostConnectionService, API_PATH } from '@deepseek-ai/dsh-client-connect
 import { assertTrustedAuthority } from './trust-fence.js'
 import { createTrustedAuth } from './trusted-auth.js'
 import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './bridge.js'
-import { CONNECTION_PACKAGE, GATE_VERSION } from './gate.js'
+import { CONNECTION_PACKAGE, GATE_ANCHOR_PACKAGES, GATE_VERSION } from './gate.js'
 
 /** Stable Cordis plugin name. */
 export const name = '@iasiv5/dsh-skip-browser-auth'
@@ -70,10 +70,16 @@ interface LoaderInternalLike {
 }
 
 /**
- * apply 内 backstop（最后防线，fail loud）：版本白名单断言读取官方 manifest
- * 本体（组合期探针只读 pnpm 路径段，会被「路径真、manifest 假」的漂移骗过）；
- * 绑定断言确认当前 entry 子树内的官方 connection 行确实被本插件禁用、
- * 同组同名且无活跃 fiber。
+ * apply 内 backstop（最后防线，fail loud）：版本白名单断言读取全部门控锚点
+ * （gate.ts 的 GATE_ANCHOR_PACKAGES：宿主 runtime 本体 + 官方 connection 包）
+ * 的 manifest 本体比对白名单（组合期探针只读 pnpm 路径段，会被
+ * 「路径真、manifest 假」的漂移骗过）；绑定断言确认当前 entry 子树内的
+ * 官方 connection 行确实被本插件禁用、同组同名且无活跃 fiber。
+ *
+ * 锚点解析与探针同基准（ctx.baseUrl，即 profile 根）：发布安装的插件不携带
+ * 任何 @deepseek-ai 运行时依赖（见 tests/manifest.test.mjs 不变量），解析只
+ * 可能命中 runtime fallback；探针基准污染的历史事故由此不变量 + 双锚点共同
+ * 封死。
  *
  * 跳过 seam 仅限「完全没有 Loader、也没有 Loader entry」的直接单元测试调用；
  * 产品组合中 loader / internal / current 任一缺失都意味着最后防线无法执行，
@@ -94,16 +100,23 @@ function assertGateBackstop(ctx: Context): void {
     throw new Error('@iasiv5/dsh-skip-browser-auth: gate backstop unavailable: current loader entry is missing')
   }
 
-  // (a) 版本断言：与官方 row 同一解析锚点（loader.internal），读 manifest 比对白名单。
+  // (a) 版本断言：与探针同一解析锚点集合（loader.internal + ctx.baseUrl），
+  // 逐锚点读 manifest 比对白名单。
   const baseUrl = (ctx as { baseUrl?: string }).baseUrl ?? ''
-  const specifier = `${CONNECTION_PACKAGE}/package.json`
   const internal = loader.internal
-  const resolved = internal.version === 'v2'
-    ? internal.resolveSync(baseUrl, { specifier, attributes: {} })
-    : internal.resolveSync(specifier, baseUrl, {})
-  const manifest = JSON.parse(readFileSync(fileURLToPath(resolved?.url as string), 'utf8')) as { version?: unknown }
-  if (manifest.version !== GATE_VERSION) {
-    throw new Error(`@iasiv5/dsh-skip-browser-auth: official connection manifest is ${String(manifest.version)}, whitelist is ['0.1.2-rc.1']; disable or uninstall the plugin`)
+  for (const anchorPackage of GATE_ANCHOR_PACKAGES) {
+    const specifier = `${anchorPackage}/package.json`
+    const resolved = internal.version === 'v2'
+      ? internal.resolveSync(baseUrl, { specifier, attributes: {} })
+      : internal.resolveSync(specifier, baseUrl, {})
+    const manifestUrl = resolved?.url
+    if (typeof manifestUrl !== 'string') {
+      throw new Error(`@iasiv5/dsh-skip-browser-auth: gate anchor ${anchorPackage} did not resolve; whitelist is ['${GATE_VERSION}']; disable or uninstall the plugin`)
+    }
+    const manifest = JSON.parse(readFileSync(fileURLToPath(manifestUrl), 'utf8')) as { version?: unknown }
+    if (manifest.version !== GATE_VERSION) {
+      throw new Error(`@iasiv5/dsh-skip-browser-auth: gate anchor ${anchorPackage} manifest is ${String(manifest.version)}, whitelist is ['${GATE_VERSION}']; disable or uninstall the plugin`)
+    }
   }
 
   // (b) 绑定断言：官方行被禁用是 Replacement 放行的前提，且不得有活跃 fiber。

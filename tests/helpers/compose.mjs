@@ -16,7 +16,7 @@ import * as Connection from '@deepseek-ai/dsh-client-connection'
 import LocalCredentials from '@deepseek-ai/dsh-credentials-local'
 import HttpServer from '@deepseek-ai/dsh-host-webserver'
 import * as FrontendStatic from '@deepseek-ai/dsh-host-frontend-static'
-import { CONNECTION_PACKAGE } from '../../lib/gate.js'
+import { CONNECTION_PACKAGE, GATE_RUNTIME_PACKAGE } from '../../lib/gate.js'
 
 // 照抄 vendor/include/src/index.ts 的 JsExpr 定义（predicate 内联同一逻辑）。
 const JsExpr = new yaml.Type('tag:yaml.org,2002:js', {
@@ -54,26 +54,38 @@ export function rawRequest(port, { path, method = 'GET', headers = {}, body } = 
  * @param t - node:test 上下文；compose 登记 dispose + 临时目录清理。
  * @param options.rows - 行清单（对象数组）；字符串值中的 {{ROOT}} 替换为临时根目录。
  * @param options.modules - 行名 → 模块（命名空间或返回模块的异步函数）；覆盖默认映射。
- * @param options.probeVersion - 探针 fixture 路径段版本（真实目录段）。
- * @param options.manifestVersion - 探针 fixture manifest 版本（默认同 probeVersion）。
+ * @param options.probeVersion - 探针 connection 锚点 fixture 路径段版本（真实目录段）。
+ * @param options.manifestVersion - 探针 connection 锚点 fixture manifest 版本（默认同 probeVersion）。
+ * @param options.runtimeVersion - 探针 runtime 锚点（@deepseek-ai/dsh）fixture 版本，
+ *   默认同 probeVersion；显式传宿主版本可模拟「插件自带 rc.1 connection + 宿主 rc.2」事故。
  * @param options.extraPatches - 追加在本插件 patch 之后的覆盖层（模拟后续 patch 层）。
  * @param options.webRuntime - 提供给 `ctx.webRuntime` 的服务值。
  * @returns context、服务端口与临时根目录。
  */
-export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, extraPatches = [], webRuntime } = {}) {
+export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, runtimeVersion, extraPatches = [], webRuntime } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'dsh-sba-compose-'))
 
   // 真实探针 fixture：<root>/gate-fixture/<pnpm 风格路径段>/node_modules/.../package.json。
-  const fixtureDir = join(
-    root,
-    'gate-fixture',
-    `@deepseek-ai+dsh-client-connection@${probeVersion}_fixture`,
-    'node_modules', '@deepseek-ai', 'dsh-client-connection',
-  )
-  await mkdir(fixtureDir, { recursive: true })
-  const fixtureFile = join(fixtureDir, 'package.json')
-  await writeFile(fixtureFile, JSON.stringify({ name: CONNECTION_PACKAGE, version: manifestVersion ?? probeVersion }))
-  const fixtureUrl = pathToFileURL(fixtureFile).href
+  // 双锚点：connection（被替换对象）+ 宿主 runtime 本体（@deepseek-ai/dsh）。
+  async function writeAnchorFixture(pkg, segmentVersion, manifestOverride) {
+    const short = pkg.slice(pkg.indexOf('/') + 1)
+    const fixtureDir = join(
+      root,
+      'gate-fixture',
+      `@deepseek-ai+${short}@${segmentVersion}_fixture`,
+      'node_modules', '@deepseek-ai', short,
+    )
+    await mkdir(fixtureDir, { recursive: true })
+    const fixtureFile = join(fixtureDir, 'package.json')
+    await writeFile(fixtureFile, JSON.stringify({ name: pkg, version: manifestOverride ?? segmentVersion }))
+    return pathToFileURL(fixtureFile).href
+  }
+  const connectionUrl = await writeAnchorFixture(CONNECTION_PACKAGE, probeVersion, manifestVersion)
+  const runtimeUrl = await writeAnchorFixture(GATE_RUNTIME_PACKAGE, runtimeVersion ?? probeVersion)
+  const fixtureUrls = {
+    [`${CONNECTION_PACKAGE}/package.json`]: connectionUrl,
+    [`${GATE_RUNTIME_PACKAGE}/package.json`]: runtimeUrl,
+  }
 
   // dist fixture：index.html 含 'shell' 标记，另有 /app.js 静态资源。
   const dist = join(root, 'dist')
@@ -130,11 +142,11 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
       // 异步 getter（箭头函数，无 prototype）当场求值；类插件等其余值原样交给 Loader。
       return typeof target === 'function' && !target.prototype ? target() : target
     },
-    // v2 形态 resolveSync(parentURL, { specifier }) → { url }；探针 specifier
-    // 指向真实 fixture 文件，其余 specifier 尝试以仓库为锚点真实解析。
+    // v2 形态 resolveSync(parentURL, { specifier }) → { url }；探针的双锚点
+    // specifier 指向真实 fixture 文件，其余 specifier 尝试以仓库为锚点真实解析。
     resolveSync(base, request) {
       const specifier = typeof request === 'string' ? request : request.specifier
-      if (specifier === `${CONNECTION_PACKAGE}/package.json`) return { url: fixtureUrl }
+      if (specifier in fixtureUrls) return { url: fixtureUrls[specifier] }
       try {
         return { url: pathToFileURL(repoRequire.resolve(specifier)).href }
       } catch {
