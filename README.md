@@ -71,4 +71,4 @@ sudo systemctl restart deepseek-harness.service
 
 详细设计、行为矩阵与实机验证记录见 [docs/DESIGN.md](./docs/DESIGN.md)。
 
-本插件包含或移植 DeepSeek Harness 的 MIT 许可代码，详见 [LICENSE](./LICENSE)。
+本插件以 [MIT License](./LICENSE) 发布；包含或移植的 DeepSeek Harness（MIT）代码，其版权与许可声明见 [NOTICE](./NOTICE)。

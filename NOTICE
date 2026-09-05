@@ -1,6 +1,25 @@
+Third-party notices
+===================
+
+This package includes or adapts MIT-licensed code from DeepSeek Harness
+(@deepseek-ai/dsh-client-connection and related packages, the "Upstream
+Code"):
+
+  - lib/client.js is an unmodified copy of the official published client
+    bundle, re-identified only by its registration id;
+  - src/trust-fence.ts and src/bridge.ts are ported from the official
+    source;
+  - src/index.ts and src/trusted-auth.ts follow the semantics of the
+    official Connection implementation.
+
+The Upstream Code is Copyright (c) 2026 DeepSeek. It is distributed in
+this package under the MIT License, whose full text follows and applies
+to the Upstream Code in its entirety.
+
+---
 MIT License
 
-Copyright (c) 2026 iasi
+Copyright (c) 2026 DeepSeek
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
