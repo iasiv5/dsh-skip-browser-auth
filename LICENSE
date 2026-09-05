@@ -1,7 +1,6 @@
 MIT License
 
-Copyright (c) 2026 DeepSeek
-Copyright (c) 2026 iasi (@iasiv5/dsh-skip-browser-auth 适配与新增部分)
+Copyright (c) 2026 iasi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -13,11 +12,6 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-本插件包含或移植 DeepSeek Harness（@deepseek-ai/dsh-client-connection 等）的
-MIT 许可代码：lib/client.js 为官方发布产物的不可变 re-ID 副本，src/trust-fence.ts
-与 src/bridge.ts 移植自官方源码，src/index.ts、src/trusted-auth.ts 基于官方
-Connection 实现语义。上游版权与许可声明如上保留。
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,3 +19,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+Third-party notices
+===================
+
+This package includes or adapts MIT-licensed code from DeepSeek Harness
+(@deepseek-ai/dsh-client-connection and related packages, the "Upstream
+Code"):
+
+  - lib/client.js is an unmodified copy of the official published client
+    bundle, re-identified only by its registration id;
+  - src/trust-fence.ts and src/bridge.ts are ported from the official
+    source;
+  - src/index.ts and src/trusted-auth.ts follow the semantics of the
+    official Connection implementation.
+
+The Upstream Code is Copyright (c) 2026 DeepSeek, licensed under the MIT
+License; the permission notice reproduced above applies to it in full.
