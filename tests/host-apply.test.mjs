@@ -161,7 +161,8 @@ test('backstop negative A3: a gate anchor does not resolve — fail loud before 
   const { ctx } = makeContext()
   const { self } = fakeSelfWithRow()
   // runtime 锚点解析不到（fallback 缺失）→ 显式 fail loud。
-  ctx.provide('loader', fakeLoader({ [CONNECTION_PACKAGE]: urls[CONNECTION_PACKAGE] }))
+  const connectionKey = `${CONNECTION_PACKAGE}/package.json`
+  ctx.provide('loader', fakeLoader({ [connectionKey]: urls[connectionKey] }))
   ctx.fiber = { entry: self }
   await assert.rejects(apply(ctx, {}), /gate anchor @deepseek-ai\/dsh did not resolve; whitelist/)
 })

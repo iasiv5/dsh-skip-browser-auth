@@ -114,8 +114,8 @@ test('probe rejects manifest drift under a whitelisted path segment', async (t) 
 
 test('probe rejects an npm layout without a version segment', async (t) => {
   const urls = {
-    [GATE_RUNTIME_PACKAGE]: 'file:///repo/node_modules/@deepseek-ai/dsh/package.json',
-    [CONNECTION_PACKAGE]: 'file:///repo/node_modules/@deepseek-ai/dsh-client-connection/package.json',
+    [`${GATE_RUNTIME_PACKAGE}/package.json`]: 'file:///repo/node_modules/@deepseek-ai/dsh/package.json',
+    [`${CONNECTION_PACKAGE}/package.json`]: 'file:///repo/node_modules/@deepseek-ai/dsh-client-connection/package.json',
   }
   assert.equal(evaluateWith(probeCtx(urls), GATE_PROBE_EXPRESSION), false)
 })
@@ -138,10 +138,12 @@ test('probe fails closed when loader/internal is missing, resolveSync throws, or
 test('probe fails closed when any anchor does not resolve (missing runtime fallback)', async (t) => {
   const { urls } = await writeGateFixtures(t)
   // runtime 锚点解析不到（如过旧宿主无 fallback、或非 pnpm 布局）→ dormant。
-  const withoutRuntime = { [CONNECTION_PACKAGE]: urls[CONNECTION_PACKAGE] }
+  const connectionKey = `${CONNECTION_PACKAGE}/package.json`
+  const withoutRuntime = { [connectionKey]: urls[connectionKey] }
   assert.equal(evaluateWith(probeCtx(withoutRuntime), GATE_PROBE_EXPRESSION), false)
   // connection 锚点解析不到同理。
-  const withoutConnection = { [GATE_RUNTIME_PACKAGE]: urls[GATE_RUNTIME_PACKAGE] }
+  const runtimeKey = `${GATE_RUNTIME_PACKAGE}/package.json`
+  const withoutConnection = { [runtimeKey]: urls[runtimeKey] }
   assert.equal(evaluateWith(probeCtx(withoutConnection), GATE_PROBE_EXPRESSION), false)
 })
 

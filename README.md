@@ -31,19 +31,27 @@ cookie，保护全部 Host API 与 Remote WebSocket。本插件安装后在任�
 
 - 组合期（Loader 装配阶段）由 bundle patch（`cordis.patch.yml`）自门控：
   - 第一行把官方 `connection` 行的 `disabled` 绑定到版本探针（`!!js` 表达式，
-    从 pnpm store 路径段提取精确版本并与白名单比对）；
+    双锚点：宿主 runtime 本体 `@deepseek-ai/dsh` 与官方 connection 包的
+    pnpm store 路径段版本必须同为白名单版本。runtime 锚点只可能经
+    `~/.dsh/profiles/node_modules/` 的 runtime fallback 解析到，不会被任何
+    插件自身依赖遮蔽——这是对 2026-09-05「探针读到插件自带副本而自我满足」
+    事故的修正）；
   - 第二行插入本插件的 `trusted-connection` 行，其 `disabled` 为行绑定表达式的
     否定（自身探针为真 + 同组官方行存在、名字匹配、确被禁用）。
 - 激活后由本插件提供 trusted-network（可信网络）等效 Connection：复用官方导出的
   `HostConnectionService`，以三方法 stub（trusted-network 语义）替代 BrowserAuth，
-  `/api` 路由、请求体上限、image capacity 断言照抄官方 apply 语义。
+  `/api` 路由、请求体上限、image capacity 断言照抄官方 apply 语义。发布产物不
+  携带任何 `@deepseek-ai` 运行时依赖（connection 仅作 devDependency 供编译期
+  类型与构建锚点），激活时经同一 fallback 解析到 runtime 自己的 connection
+  模块实例。
 - 任一门控条件不成立（探针为假、行不存在、名字漂移、官方行未禁用）→ 插件保持
   dormant（休眠）：官方行为分毫不变，插件不注册路由、不提供服务、不加载浏览器
   bundle。注意：在探针为假（非白名单版本）时，即使后续 patch 层把官方行强制设为
   `disabled: true`，行绑定内嵌的版本探针仍会阻止 Replacement 激活。
-- `apply()` 内另有 backstop（最后防线）：读官方 manifest 比对白名单、校验行绑定
-  状态，任一不满足即 fail loud 拒绝运行；产品上下文中 loader / internal /
-  当前 entry 任一缺失（最后防线无法执行）同样 fail loud。
+- `apply()` 内另有 backstop（最后防线）：读全部门控锚点（runtime 本体 +
+  connection 包）的 manifest 比对白名单、校验行绑定状态，任一不满足即
+  fail loud 拒绝运行；产品上下文中 loader / internal / 当前 entry 任一缺失
+  （最后防线无法执行）同样 fail loud。
 
 本插件包含或移植 DeepSeek Harness 的 MIT 许可代码，详见 LICENSE。
 
