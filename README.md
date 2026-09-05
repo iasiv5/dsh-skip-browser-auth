@@ -1,226 +1,74 @@
 # @iasiv5/dsh-skip-browser-auth
 
-[![Release](https://img.shields.io/github/v/tag/iasiv5/dsh-skip-browser-auth?label=Release&color=blue)](https://github.com/iasiv5/dsh-skip-browser-auth/releases)
-[![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skip-browser-auth?color=orange)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
-[![Registry Check](https://img.shields.io/badge/Registry_Check-passing-green)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
-[![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
-[![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.1--rc.2_verified-blue)](#兼容版本)
+[![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skip-browser-auth?label=npm&color=cb3837)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
+[![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.2--rc.1_verified-blue)](#兼容版本)
+[![License](https://img.shields.io/github/license/iasiv5/dsh-skip-browser-auth?color=green)](./LICENSE)
 
-个人自用的 DSH Web 插件：在兼容版本上替换官方 Connection 提供方，跳过 DSH 官方
-BrowserAuth 浏览器身份层，同时完整保留请求信任栅栏（request trust fence）。
-不修改 DSH 本体，不创建任何新的监听服务或端口。
+个人自用的 DSH Web 插件：在 **DSH 0.1.2-rc.1** 上自动跳过 BrowserAuth——打开 Web 地址即可直接使用，**不必每次把启动 URL 里那串随机 token 抄进浏览器**。
 
-## 兼容版本
+- **只在适配版本激活**：当前仅 `0.1.2-rc.1`。在 `0.1.1-rc.2` 及其它所有未测试版本上**自动休眠**，官方行为分毫不变。
+- **不修改 DSH 本体与任何机制**：仅通过 DSH 官方插件 patch 机制替换 Connection 行；卸载或禁用插件并重启，即完全恢复官方行为。
+- **提醒**：跳过认证后，Web 对本机/可信网络内的访问不再有身份层，请勿把 DSH 端口暴露给不可信网络。
 
-**当前生效的兼容版本只有一个**（白名单为精确版本匹配，不含范围）：
+## 安装
 
-| DSH 版本（`@deepseek-ai/dsh-client-connection`） | 兼容日期 | 状态 |
-| --- | --- | --- |
-| `0.1.2-rc.1` | 2026-09-05 | ✅ 唯一激活版本：Replacement 生效（trusted-network；active 实机清单待 DSH 升级后执行） |
-| 其他所有版本（含 `0.1.1-rc.2`） | — | dormant：官方行为分毫不变 |
+### 方式一：从插件市场一键安装（推荐）
 
-后续新版本经测试验证兼容后，将作为新行加入本表；不在表内的版本一律 dormant，
-安装本身在任何 DSH 版本上都成功。
+本插件已收录进我的 DSH 插件市场 **[dsh-m](https://github.com/iasiv5/dsh-m)**（收录 id：`dsh-skip-browser-auth`）。装好 dsh-m 后，在 Web 侧栏「插件市场」搜索 **Skip Browser Auth**，即可**一键安装 / 更新 / 卸载**；也可以直接对 agent 说：
 
-## 这是什么
+> 从 dsh-m 插件市场安装 dsh-skip-browser-auth，装完重启 DSH Web。
 
-DSH 官方的 BrowserAuth 在进程启动 token 与浏览器之间换取 authority 绑定的签名
-cookie，保护全部 Host API 与 Remote WebSocket。本插件安装后在任意 DSH 版本上都能
-被 `dsh plugin add` 接受；但只有当运行环境中
-`@deepseek-ai/dsh-client-connection` 的**精确版本为 `0.1.2-rc.1`** 时才激活：
-
-- 组合期（Loader 装配阶段）由 bundle patch（`cordis.patch.yml`）自门控：
-  - 第一行把官方 `connection` 行的 `disabled` 绑定到版本探针（`!!js` 表达式，
-    双锚点：宿主 runtime 本体 `@deepseek-ai/dsh` 与官方 connection 包的
-    pnpm store 路径段版本必须同为白名单版本。runtime 锚点只可能经
-    `~/.dsh/profiles/node_modules/` 的 runtime fallback 解析到，不会被任何
-    插件自身依赖遮蔽——这是对 2026-09-05「探针读到插件自带副本而自我满足」
-    事故的修正）；
-  - 第二行插入本插件的 `trusted-connection` 行，其 `disabled` 为行绑定表达式的
-    否定（自身探针为真 + 同组官方行存在、名字匹配、确被禁用）。
-- 激活后由本插件提供 trusted-network（可信网络）等效 Connection：复用官方导出的
-  `HostConnectionService`，以三方法 stub（trusted-network 语义）替代 BrowserAuth，
-  `/api` 路由、请求体上限、image capacity 断言照抄官方 apply 语义。发布产物不
-  携带任何 `@deepseek-ai` 运行时依赖（connection 仅作 devDependency 供编译期
-  类型与构建锚点），激活时经同一 fallback 解析到 runtime 自己的 connection
-  模块实例。
-- 任一门控条件不成立（探针为假、行不存在、名字漂移、官方行未禁用）→ 插件保持
-  dormant（休眠）：官方行为分毫不变，插件不注册路由、不提供服务、不加载浏览器
-  bundle。注意：在探针为假（非白名单版本）时，即使后续 patch 层把官方行强制设为
-  `disabled: true`，行绑定内嵌的版本探针仍会阻止 Replacement 激活。
-- `apply()` 内另有 backstop（最后防线）：读全部门控锚点（runtime 本体 +
-  connection 包）的 manifest 比对白名单、校验行绑定状态，任一不满足即
-  fail loud 拒绝运行；产品上下文中 loader / internal / 当前 entry 任一缺失
-  （最后防线无法执行）同样 fail loud。
-
-本插件包含或移植 DeepSeek Harness 的 MIT 许可代码，详见 LICENSE。
-
-## 安全警告
-
-Replacement 激活时进程会输出以下固定警告（逐字）：
-
-```
-@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.
-```
-
-trusted-network mode 的判据只有一个：**请求来源是否通过信任栅栏**
-（Host/Origin/Fetch Metadata/trustedHosts）。**网络可达即身份**——能通过栅栏的
-请求一律被接受，不存在身份层，本插件也不校验任何上游反代。仅在与外界隔离、或由
-可信网络层（如具备身份认证的反代）完全包住的网络中使用；`trustedHosts` 只声明
-「这些主机名解析到的请求被接受」，不构成认证。
-
-## 安装与卸载
+### 方式二：直接命令安装
 
 ```sh
-# 从本地 checkout 安装（scope 是包名的一部分，不是目录路径）
-dsh plugin --profile web add /path/to/dsh-skip-browser-auth
-
-# 发布 npm 后，从 registry 安装
 dsh plugin --profile web add @iasiv5/dsh-skip-browser-auth
+sudo systemctl restart deepseek-harness.service   # 按你的部署方式重启 DSH Web
+```
 
-sudo systemctl restart deepseek-harness.service
+### 复制给 agent 的安装提示词
 
-# 卸载（恢复官方行为；统一使用 manifest 包名）
+把下面整段贴给你机器上的 agent，它就能完成安装与验证：
+
+```text
+请给我的 DSH Web 安装 @iasiv5/dsh-skip-browser-auth 插件（DSH 0.1.2-rc.1 专用：
+自动跳过 BrowserAuth，免每次在启动 URL 后输入随机 token；其它版本会自动休眠，
+不影响任何行为）。
+1. 先执行 dsh --version 告诉我当前 DSH 版本，然后照常安装：
+   dsh plugin --profile web add @iasiv5/dsh-skip-browser-auth
+2. 重启 DSH Web 并轮询 http://127.0.0.1:3080 直到恢复 200
+   （systemd 系统级部署：sudo systemctl restart deepseek-harness.service；
+   user 级部署：systemctl --user restart dsh-web.service；端口以实际部署为准）。
+3. 若版本是 0.1.2-rc.1：确认 journal/日志中出现固定警告
+   "BrowserAuth has been skipped"，且浏览器直接打开 Web 地址不再要求 token，
+   即激活成功。
+4. 若版本不是 0.1.2-rc.1：插件会自动休眠（官方行为不变），直接告诉我即可，
+   不要做任何强行处理。
+```
+
+## 卸载
+
+```sh
 dsh plugin --profile web remove @iasiv5/dsh-skip-browser-auth
 sudo systemctl restart deepseek-harness.service
 ```
 
-没有 `skipBrowserAuth` 之类的配置项——始终 skip；卸载或禁用插件并重启即恢复官方
-行为。激活状态由「行为 + 警告」共同证明（见下方升级清单），配置证据
-（dump-config 出现 `trusted-connection` 行）仅作安装证据。
+市场安装的用户在「插件市场 → 已装」里点卸载即可。卸载或禁用并重启后，官方 BrowserAuth 完全恢复。
 
-## 版本白名单与升级策略
+## 兼容版本
 
-- 唯一白名单版本：字符串精确值 `'0.1.2-rc.1'`。禁止 `>=`、范围、`latest` 判断；
-  探测失败一律 fail-closed 到 dormant。
-- 升级后 `@deepseek-ai/dsh-client-connection` 版本不在精确白名单内时，本插件
-  自动回到 dormant（官方行为分毫不变），不影响使用；升级到白名单版本
-  （`0.1.2-rc.1`）则会激活。
-- 新版本需要逐个测试验证后把精确版本加入白名单（`src/gate.ts` 的
-  `GATE_VERSION` 与白名单判断、`src/index.ts` backstop 的白名单文案）；
-  无法安全跟随时对插件做版本分叉。
+| DSH 版本 | 状态 |
+| --- | --- |
+| `0.1.2-rc.1` | ✅ 激活：跳过 BrowserAuth（pnpm 与 npm 扁平安装布局均可识别） |
+| `0.1.1-rc.2` 及其它未测试版本 | 😴 自动休眠：官方行为分毫不变 |
 
-## 行为矩阵
+新版本经实测验证后逐个加入白名单；版本探测失败一律自动休眠（fail-closed）。
 
-| 组合 | 官方 `connection` 行 | 本插件 `trusted-connection` 行 | 行为 |
-| --- | --- | --- | --- |
-| rc.1 + 探针真 + 绑定完好 | `disabled: true`（被 patch 禁用，无 fiber） | `disabled: false`（活跃 fiber） | Replacement 激活：trusted-network 行为 + 固定警告 |
-| rc.1 + 探针假（如 9.9.9 段） | 活跃 | dormant | 官方 BrowserAuth 照常（401/cookie 换取） |
-| rc.1 + npm 扁平布局（无路径段，manifest rc.1，如 dshm 部署） | `disabled: true` | `disabled: false`（manifest 回退确认版本） | Replacement 激活：同第一行 |
-| npm 扁平布局 + 宿主 rc.2（manifest 漂移） | 活跃 | dormant | runtime 锚点 manifest 否决，官方 BrowserAuth 照常 |
-| rc.2（0.1.1-rc.2，真实产物） | 活跃（rc.2 无 BrowserAuth） | dormant | 官方 rc.2 基线：`GET /` 200、`/api` 无认证层 |
-| 官方行名字漂移 | 活跃（patch 被 name-guard 跳过） | dormant | 官方行为，无冲突 |
-| 非白名单版本 + 后续 patch 层强制禁用官方行 | `disabled: true`（探针仍为假） | dormant（行绑定内嵌探针拦截） | 无 Connection 服务（无身份层也无替代） |
-| 白名单 rc.1 + 后续 patch 层强制禁用官方行 | `disabled: true`（与本插件自身禁用一致） | 激活（行绑定要求的正是官方行已禁用） | Replacement 照常激活 |
-| 路径段真、manifest 版本漂移 | 禁用 | 进入 apply 后被 backstop 拒绝 | fail loud：whitelist 诊断，`loader.await()` reject |
-| 段假、盘上 manifest 真版本 | 活跃 | dormant | 段分支短路判否，不读 manifest 救援 |
+## 机制与安全（简述）
 
-## 测试说明
+- 组合期版本探针采用**双锚点**（宿主 runtime 本体 + 官方 connection 包）与**双分支**版本确认（pnpm 路径段 / manifest 读取，兼容两种安装布局），精确匹配白名单才激活；任何解析失败、版本漂移、结构漂移都保持休眠。
+- 激活后复用官方导出的 `HostConnectionService` 提供 trusted-network Connection：Host/Origin/trustedHosts 请求信任栅栏完整保留，仅移除身份层；激活时进程逐字输出固定警告 `@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. ...`。
+- 运行前 backstop 复核 manifest 白名单与行绑定状态，任何不满足即拒绝运行。
 
-```sh
-npm run test:all
-# 等价于：npm run test:rc2-fixture && npm run build && npm run typecheck && npm test
-```
+详细设计、行为矩阵与实机验证记录见 [docs/DESIGN.md](./docs/DESIGN.md)。
 
-- `test:rc2-fixture` 需要 npm 网络访问：以别名安装 rc.2 dormant 组合所需产物。
-  `--no-save` 会改动 `node_modules`（以及为满足 rc.2 peer 链所需的嵌套安装），
-  但不改 package manifest 与 lockfile（脚本内以 `git diff` 证明）。
-- 本机 npm 11.19 的 allow-scripts 策略与 project-scoped 安装存在三处适配
-  （`--ignore-scripts`、`--force` 取代 `--legacy-peer-deps`、仅剥离
-  `npm_config_allow_scripts` / `NPM_CONFIG_ALLOW_SCRIPTS` 两个确证冲突键），
-  详见 `scripts/install-rc2-fixture.mjs` 头注释。
-- 组合测试（`tests/composition/`）用真实 Loader + Include + 真实官方产物端到端
-  覆盖 active / gate-false / 真实 rc.2 dormant / gate 绑定负向 / 事故回归
-  （bundle-rc.1-on-rc.2-host）/ npm 扁平布局 active+dormant 等路径；探针
-  fixture 是真实文件（临时目录内构造 pnpm 路径段或 npm 扁平布局 + manifest）。
-- 测试使用 Node 内置 test runner（无 vitest）。
-
-## 已知限制
-
-- npm 布局（`node_modules/@deepseek-ai/dsh-client-connection`，路径无版本段）
-  曾使探针无法确认版本（v0.1.1 在 dshm 部署上永远 dormant）。v0.2.0 起探针对
-  无版本段的 `file:` URL 回退为**同步读 manifest 比对精确版本**
-  （`process.getBuiltinModule('node:fs')`，Node ≥22.3），pnpm 与 npm 两种布局
-  均可确认版本；pnpm 路径段仍是快路径，段真时保留「manifest 漂移由 apply 内
-  backstop 兜底 fail loud」的既有语义。
-- 组合测试的探针 fixture 是受控构造（真实文件但路径段版本可指定），真实布局的
-  版本提取由 Task 11 式实机验证与 Task 5 的 pnpm 真实路径断言兜底。
-- 完整浏览器组图 e2e（client-modules 组图、浏览器半区真实加载）未覆盖；
-  由 client bundle materialization 测试（单次注册、factory 可执行、external
-  全满足）与下方升级 active 清单兜底。
-- 激活要求 DSH 升级到 `0.1.2-rc.1` 后执行实机清单验证。
-
-## 实机 dormant 前后对照记录
-
-本机 DSH runtime 为 `0.1.1-rc.2`（2026-09-05 实测）。验证协议：安装前基线 →
-安装 + 重启 → 行为逐项对照 → 卸载 + 重启 → 复验基线；journal 检查统一使用
-安装前固化的时间锚；任何失败立即回滚（本次回滚未被触发）。
-
-| 检查项 | 安装前基线 | 安装后（dormant） | 卸载恢复后 |
-| --- | --- | --- | --- |
-| `GET /` | `200` `text/html; charset=utf-8` | `200` `text/html; charset=utf-8` | `200` `text/html; charset=utf-8` |
-| `POST /api/session.list`（未认证） | `200` `application/json` | `200` `application/json` | `200` `application/json` |
-| envelope `type` / `rpcId` / `resultOk` | `server-response` / `probe` / `true` | `server-response` / `probe` / `true` | `server-response` / `probe` / `true` |
-| 首页静态 shell marker（首个 `<script src=`） | 在 | 在 | 在 |
-| 首页认证文案 `dsh web authentication required` | 0 次出现 | 0 次出现 | 0 次出现 |
-
-三组行为文件逐字节 diff 均为空；安装后与卸载后 journal（同一时间锚窗口内）
-均无固定警告 `BrowserAuth has been skipped`、无 err 级日志。配置证据：安装后
-`dsh --profile web --dump-config` 出现 `trusted-connection` 行（仅作安装证据，
-不作为未激活证明）；卸载后该行消失、bundles 中无本插件。回滚未被触发。
-
-### scoped rename 后重新验证（2026-09-05，`@iasiv5/dsh-skip-browser-auth@0.1.0`）
-
-包名改为 scoped 后按同一协议重新执行（安装 `/home/ubuntu/workspace/dsh-skip-browser-auth`
-→ 重启 → 对照 → `dsh plugin --profile web remove @iasiv5/dsh-skip-browser-auth`
-→ 重启 → 复验）：安装证据为 bundles 出现 `@iasiv5/dsh-skip-browser-auth`、
-dump-config 第 612 行 `trusted-connection` 行（行名 `@iasiv5/dsh-skip-browser-auth`）；
-三组行为文件逐字节 diff 均为空（`root 200 text/html`、`api 200 application/json`、
-`type=server-response` / `rpcId=probe` / `resultOk=true`、authCount=0）；
-安装后与卸载后 journal 均无固定警告、无 err 级日志；scoped 卸载无残留；
-回滚未被触发。本节替代首次记录，作为 scoped 包身份的实机 dormant 结论。
-
-## 升级到 0.1.2-rc.1 后的 active 验证清单
-
-DSH 升级到 `0.1.2-rc.1` 并安装本插件、重启后，依次执行：
-
-1. 配置证据（仅安装证据，不证明激活）：
-
-   ```sh
-   dsh --profile web --dump-config | grep -n -A2 'id: trusted-connection'
-   # 预期：出现 trusted-connection 行
-   ```
-
-2. 行为验证（与固定警告共同证明激活）：
-
-   ```sh
-   # GET / 免 token → 200（无 401、无认证文案）
-   curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3080/
-   # 预期：200
-
-   # GET /?token=x → 303 location: /（token 清理）
-   curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' 'http://127.0.0.1:3080/?token=x'
-   # 预期：303 http://127.0.0.1:3080/
-
-   # 无 cookie POST /api → 非 401/403（无认证层；无 api-gateway 挂载时 404）
-   curl -s -o /dev/null -w '%{http_code}\n' -X POST \
-     -H 'content-type: application/json' \
-     -d '{"type":"client-request","rpcId":"probe","method":"session.list","payload":{}}' \
-     http://127.0.0.1:3080/api/session.list
-   # 预期：非 401/403
-   ```
-
-3. journal 固定警告：
-
-   ```sh
-   sudo journalctl -u deepseek-harness.service --since '<重启时间点>' \
-     | grep -F 'BrowserAuth has been skipped'
-   # 预期：出现固定警告文案
-   ```
-
-4. 回滚路径（任何时候行为异常）：
-
-   ```sh
-   dsh plugin --profile web remove @iasiv5/dsh-skip-browser-auth
-   sudo systemctl restart deepseek-harness.service
-   ```
+本插件包含或移植 DeepSeek Harness 的 MIT 许可代码，详见 [LICENSE](./LICENSE)。
