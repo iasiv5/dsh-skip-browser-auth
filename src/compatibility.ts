@@ -28,7 +28,14 @@ export const COMPATIBILITY_PROFILES = [
   },
   {
     id: 'carrier-neutral-v2',
-    pairs: [{ runtime: '0.1.5-rc.1', connection: '0.1.5-rc.1' }],
+    // 0.1.5-rc.2 joined this generation after a byte-level audit: every anchor
+    // package the gate probes (@deepseek-ai/dsh, dsh-client-connection,
+    // dsh-host-webserver, dsh-web-app) ships rc.1-identical code and only bumps
+    // manifest versions/dependency ranges. See docs/COMPATIBILITY.md §6.
+    pairs: [
+      { runtime: '0.1.5-rc.1', connection: '0.1.5-rc.1' },
+      { runtime: '0.1.5-rc.2', connection: '0.1.5-rc.2' },
+    ],
     hostAdapter: 'carrier-neutral',
     clientVariant: 'rc15',
     requiresRecoveryGlobal: true,

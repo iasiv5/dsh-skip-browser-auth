@@ -11,7 +11,7 @@
 | profile | runtime/connection 精确版本对 | Host adapter | Client variant | 状态 |
 | --- | --- | --- | --- | --- |
 | `legacy-web-v1` | `0.1.2-rc.1` + `0.1.2-rc.1` | legacy webserver：`/api` prefix + buffered bridge | rc12 官方 client | ✅ active |
-| `carrier-neutral-v2` | `0.1.5-rc.1` + `0.1.5-rc.1` | carrier-neutral：runtime module + requestBodyMode + RPC carrier | rc15 官方 client | ✅ active（代码和真实 npm fixture 已验证；真实 DSH 部署仍需执行清单） |
+| `carrier-neutral-v2` | `0.1.5-rc.1` + `0.1.5-rc.1`；`0.1.5-rc.2` + `0.1.5-rc.2` | carrier-neutral：runtime module + requestBodyMode + RPC carrier | rc15 官方 client | ✅ active（代码和真实 npm fixture 已验证；真实 DSH 部署仍需执行清单。rc.2 为 rc.1 的依赖版本对齐重发布，审计见 COMPATIBILITY.md §5.3） |
 | — | 混合版本、未知版本、未实现 profile | — | — | 😴 dormant |
 
 以下组合不得激活：
@@ -19,6 +19,8 @@
 ```text
 runtime=0.1.2-rc.1 + connection=0.1.5-rc.1
 runtime=0.1.5-rc.1 + connection=0.1.2-rc.1
+runtime=0.1.5-rc.1 + connection=0.1.5-rc.2（同代际跨 patch 混合）
+runtime=0.1.5-rc.2 + connection=0.1.5-rc.1
 ```
 
 profile 数据源位于 `src/compatibility.ts`。`src/gate.ts` 从 profile pairs 生成 `GATE_PROFILE_EXPRESSION`、boolean activation probe 和 row binding expression；`cordis.patch.yml` 把 profile id 传入插件行。host adapter 与 client dispatcher 都消费同一个 profile id，不各自猜测版本。
@@ -130,7 +132,7 @@ npm run test:all
 
 ## 已知限制
 
-- 真实 DSH `0.1.5-rc.1` 宿主部署的 active checklist 仍需在对应机器上执行；当前仓库已用真实 npm 0.1.5 packages 完成 host/client/route 组合验证，但不能把 fixture 结果等同于真实部署结果。
+- 真实 DSH `0.1.5-rc.1` / `0.1.5-rc.2` 宿主部署的 active checklist 仍需在对应机器上执行；当前仓库已用真实 npm 0.1.5-rc.1/rc.2 packages 完成 host/client/route 组合验证，但不能把 fixture 结果等同于真实部署结果。
 - 完整浏览器组图 e2e（client-modules 生产组图、实际浏览器页面加载）仍由 dispatcher materialization、index-inject boot marker 和真实组合测试兜底，未覆盖所有 UI feature。
 - 0.1.5 官方 release 还包含 Session V3、Session lifecycle、Agent/Inbox/Web panel 等与本插件无关的其他 breaking changes；本插件只声明 Connection/BrowserAuth replacement 相关 profile 兼容性。
 - profile 选择故意 fail-closed：当未来 DSH 改动但尚未建立新 adapter/client variant 时，插件会 dormant，而不会尝试“尽量运行”。
@@ -151,7 +153,7 @@ npm run test:all
 
 ## active 实机验证清单（两个 profile 通用）
 
-在 DSH 升级到 `0.1.2-rc.1` 或 `0.1.5-rc.1`、安装插件并重启后执行：
+在 DSH 升级到 `0.1.2-rc.1`、`0.1.5-rc.1` 或 `0.1.5-rc.2`、安装插件并重启后执行：
 
 1. 确认 profile 行存在：
 

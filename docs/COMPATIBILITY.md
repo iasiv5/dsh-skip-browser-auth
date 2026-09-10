@@ -47,7 +47,10 @@ const COMPATIBILITY_PROFILES = [
   },
   {
     id: 'carrier-neutral-v2',
-    pairs: [{ runtime: '0.1.5-rc.1', connection: '0.1.5-rc.1' }],
+    pairs: [
+      { runtime: '0.1.5-rc.1', connection: '0.1.5-rc.1' },
+      { runtime: '0.1.5-rc.2', connection: '0.1.5-rc.2' },
+    ],
     hostAdapter: 'carrier-neutral',
     clientVariant: 'rc15',
     requiresRecoveryGlobal: true,
@@ -169,6 +172,26 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 4. 通过全量组合与真实部署验证后，将 profile 改为 `active`。
 5. 更新 README、CONTEXT、DESIGN、本文件和版本矩阵。
 
+### 5.3 审计记录：`0.1.5-rc.2` 加入 `carrier-neutral-v2`（2026-09-10）
+
+结论：**rc.2 通过 §5.1 全部条件，作为新 pair 加入既有代际**，未新增 adapter/client variant。
+
+审计方法：从 npm 拉取四个锚点包的 `0.1.5-rc.1` 与 `0.1.5-rc.2` tarball 做 `diff -r` 逐字节对比：
+
+| 包 | rc.1 → rc.2 代码差异 |
+| --- | --- |
+| `@deepseek-ai/dsh`（runtime 本体，探针第一锚点） | 无（仅 package.json version/依赖区间 bump） |
+| `@deepseek-ai/dsh-client-connection`（被替换对象 + client variant 源） | 无（仅 package.json bump；`lib/`、`client/` 逐字节一致） |
+| `@deepseek-ai/dsh-host-webserver`（DI/web carrier 契约） | 无（仅 package.json version bump） |
+| `@deepseek-ai/dsh-web-app`（浏览器壳） | 无（仅 package.json bump） |
+
+即 `0.1.5-rc.2` 是 rc.1 的**依赖版本对齐重发布**：§5.1 的第 1–3 条（host 入口/构造器/`requestRejection`/`createSharedFetchHandler`/route/body 契约、adapter 无分支、client bundle 契约）由逐字节一致直接满足；第 4–5 条由本轮新增测试满足：
+
+- gate 探针/profile 解析：rc.2 精确对正例；`rc.1 runtime + rc.2 connection` 同代际跨 patch 混合负例（必须 dormant）。
+- 真实 npm fixture：`install-rc15-fixture.mjs` 追加 `*-rc152` 别名（真实 `0.1.5-rc.2` 包），`tests/composition/active-rc152.test.mjs` 用真实 rc.2 包复刻 full active checklist（host/client/RPC/streaming Fetch/trust fence），并断言跨 patch 混合 dormant。
+
+第 6 条（真实 DSH `0.1.5-rc.2` 宿主 active checklist）待宿主升级后按 DESIGN 清单执行。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -176,6 +199,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - profile exact pair、mixed pair、unknown pair、path/manifest drift、npm/pnpm fallback
 - 0.1.2 legacy active composition
 - 0.1.5 真实 npm package carrier-neutral composition
+- 0.1.5-rc.2 真实 npm package carrier-neutral composition（含跨 patch 混合 dormant，见 §5.3）
 - 0.1.5 `connection.rpc.handle()` dedicated channel 不再返回 405
 - 0.1.5 exact `/api` streaming Fetch route
 - 0.1.5 recovery/profile index globals
@@ -186,3 +210,4 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 尚未宣称：
 
 - 在真实运行 DSH `0.1.5-rc.1` 服务上的 active 部署结果。该验证应按 `docs/DESIGN.md` active checklist 执行并记录。
+- 在真实运行 DSH `0.1.5-rc.2` 服务上的 active 部署结果（升级宿主后按同一清单执行）。

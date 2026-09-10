@@ -20,12 +20,17 @@ execFileSync('npm', [
   '--force',
   // Keep both real generations in node_modules: npm's peer resolver otherwise
   // removes the older aliases when the second generation is installed alone.
+  // rc152 aliases carry the 0.1.5-rc.2 republish (rc.1-identical code, bumped
+  // manifest) so composition tests exercise the exact versions the gate pins.
   'dsh-client-connection-rc2@npm:@deepseek-ai/dsh-client-connection@0.1.1-rc.2',
   'frontend-static-rc2@npm:@deepseek-ai/dsh-host-frontend-static@0.1.1-rc.2',
   '@deepseek-ai/dsh-host-apiproxy@0.1.1-rc.2',
   'dsh-client-connection-rc15@npm:@deepseek-ai/dsh-client-connection@0.1.5-rc.1',
   'frontend-static-rc15@npm:@deepseek-ai/dsh-host-frontend-static@0.1.5-rc.1',
   'webserver-rc15@npm:@deepseek-ai/dsh-host-webserver@0.1.5-rc.1',
+  'dsh-client-connection-rc152@npm:@deepseek-ai/dsh-client-connection@0.1.5-rc.2',
+  'frontend-static-rc152@npm:@deepseek-ai/dsh-host-frontend-static@0.1.5-rc.2',
+  'webserver-rc152@npm:@deepseek-ai/dsh-host-webserver@0.1.5-rc.2',
 ], { cwd: root, stdio: 'inherit', env: childEnv })
 
 for (const file of trackedFiles) {
