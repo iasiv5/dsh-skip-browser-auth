@@ -1,6 +1,6 @@
 {
   "name": "@iasiv5/dsh-skip-browser-auth",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "DSH 0.1.2-rc.1 与 0.1.5-rc.1 的分代兼容插件：按精确 compatibility profile 自动跳过 BrowserAuth；其它版本自动休眠，不修改任何 DSH 本体与机制",
   "keywords": [
     "dsh",
