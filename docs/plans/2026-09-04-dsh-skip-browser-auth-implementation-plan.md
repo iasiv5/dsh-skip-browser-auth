@@ -1,5 +1,10 @@
 # dsh-skip-browser-auth 实施计划
 
+> ⚠️ 已作废（历史留档）：本计划对应 v0.1.x 单版本实现，已被
+> `docs/plans/2026-09-10-multi-generation-compatibility-implementation-plan.md`
+> （0.1.2 + 0.1.5 分代兼容 profile）取代；文中“唯一白名单版本 0.1.2-rc.1”等
+> 约束不再是当前事实。执行结果与本计划的关系见文末「执行后经授权偏差与勘误」。
+
 ## 目标
 
 - 交付个人用 DSH 插件 `dsh-skip-browser-auth`：安装在任意 DSH 版本上都成功；仅在 `@deepseek-ai/dsh-client-connection` 版本为 `0.1.2-rc.1` 时激活，禁用官方 `connection` row 并提供跳过 BrowserAuth 的等效 Connection 能力；其他版本（含 `0.1.1-rc.2`）保持 dormant。

@@ -17,7 +17,7 @@
  *     它只可能来自 runtime fallback，不可能被任何 profile 插件的依赖
  *     抬升污染；其版本即宿主 runtime 版本。
  *  2. 第二锚点仍是官方 connection 包（被替换对象本体）；双锚点必须同时
- *     命中白名单版本，任一解析失败或版本漂移一律 dormant。
+ *     命中同一个 active compatibility profile pair，任一解析失败、混合版本或版本漂移一律 dormant。
  * 配套必要条件：本插件的 dependencies 不得声明任何 `@deepseek-ai` 运行时
  * 包（connection 仅作 devDependency 供编译期类型与构建锚点），由
  * tests/manifest.test.mjs 作为不变量看护。
@@ -34,10 +34,24 @@
  * fail loud；最后防线在 apply 内 backstop）。
  */
 
+import {
+  ACTIVE_COMPATIBILITY_PROFILE_IDS,
+  GATE_PROFILE_TABLE,
+} from './compatibility.js'
+
+export {
+  ACTIVE_COMPATIBILITY_PROFILE_IDS,
+  COMPATIBILITY_PROFILES,
+  GATE_VERSION,
+  GATE_VERSIONS,
+  isActiveCompatibilityProfileId,
+  resolveActiveCompatibilityProfile,
+  resolveCompatibilityProfile,
+} from './compatibility.js'
+
 export const CONNECTION_PACKAGE = '@deepseek-ai/dsh-client-connection'
 /** 宿主 runtime 本体包：探针的第一锚点，版本即宿主 dsh 版本。 */
 export const GATE_RUNTIME_PACKAGE = '@deepseek-ai/dsh'
-export const GATE_VERSION = '0.1.2-rc.1'
 /** 探针锚点（顺序即求值顺序）：宿主 runtime 本体在前，被替换对象在后。 */
 export const GATE_ANCHOR_PACKAGES = [GATE_RUNTIME_PACKAGE, CONNECTION_PACKAGE] as const
 
@@ -54,10 +68,15 @@ export function versionSegmentPatternSource(pkg: string): string {
 /** 探针内嵌的锚点表：`[包名, 版本段正则源]` 对，全部由上方常量派生。 */
 const GATE_ANCHOR_TABLE = GATE_ANCHOR_PACKAGES.map((pkg) => [pkg, versionSegmentPatternSource(pkg)])
 
-// 版本探针：单行；生成 cordis.patch.yml 官方行 disabled（scripts/write-patch.mjs）。
-// 逐锚点解析 `锚点包/package.json`，版本（路径段快路径或 manifest 回退）全部
-// 精确等于 GATE_VERSION 才放行。
-export const GATE_PROBE_EXPRESSION = `(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return false; const versionOfUrl = (url, patternSource) => { if (typeof url !== 'string') return null; const decoded = decodeURIComponent(url); const segmented = decoded.match(new RegExp(patternSource)); if (segmented !== null) return segmented[1]; if (decoded.slice(0, 5) === 'file:') { const processRef = globalThis.process; if (processRef === null || typeof processRef !== 'object' || typeof processRef.getBuiltinModule !== 'function') return null; const fsModule = processRef.getBuiltinModule('node:fs'); const urlModule = processRef.getBuiltinModule('node:url'); if (!fsModule || typeof fsModule.readFileSync !== 'function' || !urlModule || typeof urlModule.fileURLToPath !== 'function') return null; const manifest = JSON.parse(fsModule.readFileSync(urlModule.fileURLToPath(url), 'utf8')); return manifest !== null && typeof manifest === 'object' && typeof manifest.version === 'string' ? manifest.version : null; } return null; }; const anchors = ${JSON.stringify(GATE_ANCHOR_TABLE)}; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + '/package.json'; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return false; } let anchorVersion; try { anchorVersion = versionOfUrl(url, patternSource); } catch (gateError) { return false; } if (anchorVersion !== '${GATE_VERSION}') return false; } return true; } catch (gateError) { return false; } })()`
+// Profile probe：单行；生成 cordis.patch.yml 的 profile-aware disabled 表达式。
+// 逐锚点解析 `锚点包/package.json`，返回完整 runtime/connection pair 对应的
+// profile id；candidate profile 也可被识别，是否允许激活由下方 boolean probe
+// 根据 profile status 决定。解析失败、未知 pair 或混合 pair 一律返回 null。
+export const GATE_PROFILE_EXPRESSION = `(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return null; const versionOfUrl = (url, patternSource) => { if (typeof url !== 'string') return null; const decoded = decodeURIComponent(url); const segmented = decoded.match(new RegExp(patternSource)); if (segmented !== null) return segmented[1]; if (decoded.slice(0, 5) === 'file:') { const processRef = globalThis.process; if (processRef === null || typeof processRef !== 'object' || typeof processRef.getBuiltinModule !== 'function') return null; const fsModule = processRef.getBuiltinModule('node:fs'); const urlModule = processRef.getBuiltinModule('node:url'); if (!fsModule || typeof fsModule.readFileSync !== 'function' || !urlModule || typeof urlModule.fileURLToPath !== 'function') return null; const manifest = JSON.parse(fsModule.readFileSync(urlModule.fileURLToPath(url), 'utf8')); return manifest !== null && typeof manifest === 'object' && typeof manifest.version === 'string' ? manifest.version : null; } return null; }; const anchors = ${JSON.stringify(GATE_ANCHOR_TABLE)}; const versions = []; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + '/package.json'; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return null; } let anchorVersion; try { anchorVersion = versionOfUrl(url, patternSource); } catch (gateError) { return null; } if (anchorVersion === null) return null; versions.push(anchorVersion); } const profiles = ${JSON.stringify(GATE_PROFILE_TABLE)}; for (const profile of profiles) { if (profile.pairs.some((pair) => pair.runtime === versions[0] && pair.connection === versions[1])) return profile.id; } return null; } catch (gateError) { return null; } })()`
+// Boolean activation probe: only active profiles disable the official row.
+// A known candidate profile remains dormant until its host/client adapter is
+// promoted, while the profile expression still exposes its exact pair id.
+export const GATE_PROBE_EXPRESSION = `(() => { try { const profile = (${GATE_PROFILE_EXPRESSION}); return profile !== null && ${JSON.stringify(ACTIVE_COMPATIBILITY_PROFILE_IDS)}.includes(profile); } catch (gateError) { return false; } })()`
 // 行绑定放行：自身探针为真 + 同组 sibling 存在且名字匹配且其 effective disabled 为真。
 // sibling 必须从当前 entry（Symbol.for('cordis.entry')）所属子树解析，
 // 根 Loader 的 resolve 看不到 Include 子树内的行。
@@ -66,7 +85,7 @@ export const GATE_ROW_ALLOWED_EXPRESSION = `(() => { try { const self = ctx[Symb
 /**
  * Evaluate the activation probe against a loader context scope.
  * @param ctx - the `!!js` evaluation scope (same object the Loader passes).
- * @returns true only when every gate anchor resolves to exactly the whitelisted version.
+ * @returns true only when both gate anchors resolve to one active compatibility profile pair.
  */
 export function evaluateGate(ctx: object): boolean {
   // 与 vendor/loader/src/config/utils.ts 的 evaluate 同语义：with(ctx) + eval。

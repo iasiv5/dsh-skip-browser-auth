@@ -11,10 +11,13 @@
 //   因缺 dsh-scope 等 rc.2 peer 而断裂。--force 让 npm 把冲突 peer 嵌套安置，
 //   导入链完整可加载（组合中 webserver 行由测试显式映射 rc.1 模块，不消费该嵌套副本）。
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
+const trackedFiles = ['package.json', 'package-lock.json']
+const before = new Map(trackedFiles.map((file) => [file, readFileSync(join(root, file), 'utf8')]))
 
 // npm run 会把父 npm 的配置以 npm_config_* 环境变量注入子进程；其中的
 // allow-scripts 会被子 npm 视为「CLI 传入的 --allow-scripts」并按
@@ -38,5 +41,8 @@ execFileSync('npm', [
 ], { cwd: root, stdio: 'inherit', env: childEnv })
 
 // 证明 fixture 安装未改动依赖清单与 lockfile；失败即整体失败。
-execFileSync('git', ['diff', '--exit-code', 'package.json', 'package-lock.json'], { cwd: root, stdio: 'inherit' })
+for (const file of trackedFiles) {
+  const after = readFileSync(join(root, file), 'utf8')
+  if (after !== before.get(file)) throw new Error(`rc2 fixture install modified ${file}`)
+}
 console.log('rc2 fixture installed; package.json and package-lock.json unchanged')

@@ -7,7 +7,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { CONNECTION_PACKAGE, GATE_VERSION, GATE_RUNTIME_PACKAGE } from '../lib/gate.js'
+import { CONNECTION_PACKAGE, GATE_VERSIONS, GATE_RUNTIME_PACKAGE } from '../lib/gate.js'
 
 const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
@@ -17,10 +17,16 @@ test('dependencies must not carry any @deepseek-ai runtime package', () => {
   assert.deepEqual(offenders, [], `move @deepseek-ai runtime packages to devDependencies: ${offenders.join(', ')}`)
 })
 
-test(`connection stays a devDependency pinned to the gate version`, () => {
+test(`connection stays a devDependency pinned to one profile version`, () => {
   const devDependencies = manifest.devDependencies ?? {}
-  assert.equal(devDependencies[CONNECTION_PACKAGE], GATE_VERSION)
+  assert.equal(GATE_VERSIONS.includes(devDependencies[CONNECTION_PACKAGE]), true)
   assert.equal(manifest.dependencies?.[CONNECTION_PACKAGE], undefined)
+})
+
+test('0.1.5 client build alias stays dev-only', () => {
+  const devDependencies = manifest.devDependencies ?? {}
+  assert.equal(devDependencies['dsh-client-connection-rc15'], 'npm:@deepseek-ai/dsh-client-connection@0.1.5-rc.1')
+  assert.equal(manifest.dependencies?.['dsh-client-connection-rc15'], undefined)
 })
 
 test('gate anchors never collide with declared runtime dependencies', () => {

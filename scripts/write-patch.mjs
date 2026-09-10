@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import yaml from 'js-yaml'
-import { GATE_PROBE_EXPRESSION, GATE_ROW_ALLOWED_EXPRESSION } from '../lib/gate.js'
+import { GATE_PROFILE_EXPRESSION, GATE_PROBE_EXPRESSION, GATE_ROW_ALLOWED_EXPRESSION } from '../lib/gate.js'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 
@@ -34,7 +34,10 @@ const patchList = [
         id: 'trusted-connection',
         name: '@iasiv5/dsh-skip-browser-auth',
         inject: ['webRuntime'],
-        config: { trustedHosts: { __jsExpr: 'ctx.webRuntime.trustedHosts' } },
+        config: {
+          trustedHosts: { __jsExpr: 'ctx.webRuntime.trustedHosts' },
+          compatibilityProfile: { __jsExpr: GATE_PROFILE_EXPRESSION },
+        },
         disabled: { __jsExpr: `!(${GATE_ROW_ALLOWED_EXPRESSION})` },
       },
     ],
@@ -45,9 +48,9 @@ const header = [
   '# 本文件由 scripts/write-patch.mjs 从 lib/gate.js 常量机械生成，请勿手改。',
   '# 自门控 bundle patch：第一行把官方 connection 行的 disabled 绑定到版本探针',
   '# （双锚点：宿主 runtime 本体 @deepseek-ai/dsh 与官方 connection 包的 pnpm',
-  '# 路径段版本必须同为 0.1.2-rc.1；runtime 锚点只可能来自 runtime fallback，',
-  '# 不会被插件自身依赖污染）；第二行插入本插件的 trusted-connection 行，其',
-  '# disabled 为行绑定表达式的否定（行绑定内嵌同一探针）。',
+  '# runtime/connection 必须命中同一个 active compatibility profile；runtime 锚点',
+  '# 只可能来自 runtime fallback，不会被插件自身依赖污染）；第二行插入本插件的',
+  '# trusted-connection 行，其 config 携带 profile id，disabled 为行绑定表达式的否定。',
   '# 任何门控条件不成立（锚点解析失败、版本漂移、行不存在、名字漂移、',
   '# 官方行未禁用），Replacement 一律保持 dormant（fail-closed）。探针为假时，',
   '# 即使后续 patch 层把官方行强制 disabled，行绑定内嵌探针仍保持 dormant。',

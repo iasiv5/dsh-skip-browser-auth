@@ -153,7 +153,7 @@ test('backstop negative A2: path segment passes but runtime manifest drifts — 
   ctx.provide('loader', fakeLoader(urls))
   ctx.fiber = { entry: self }
   await assert.rejects(apply(ctx, {}), /whitelist/)
-  await assert.rejects(apply(ctx, {}), /@deepseek-ai\/dsh /)
+  await assert.rejects(apply(ctx, {}), /@deepseek-ai\/dsh=/)
 })
 
 test('backstop negative A3: a gate anchor does not resolve — fail loud before any route', async (t) => {

@@ -16,7 +16,7 @@ test('real rc.2 dormant: official rc.2 active, plugin dormant, baseline behavior
       import('frontend-static-rc2'),
     ])
   } catch {
-    t.fail('先运行 npm run test:rc2-fixture')
+    assert.fail('先运行 npm run test:rc2-fixture')
     return
   }
 

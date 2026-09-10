@@ -136,7 +136,19 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
   const repoRequire = createRequire(import.meta.url)
   context.loader.internal = {
     version: 'v2',
-    async import(specifier) {
+    // 严格复刻 cordis-plugin-loader 的产品契约：internal.import(name, baseUrl, options)
+    // 三参。2026-09-10 崩溃事故（单参调用）曾因 fake 不校验签名而漏测，这里
+    // 让所有组合测试对契约漂移 fail loud。
+    async import(specifier, baseUrl, options) {
+      if (typeof specifier !== 'string' || specifier === '') {
+        throw new Error(`loader.internal.import requires a non-empty specifier; got ${String(specifier)}`)
+      }
+      if (typeof baseUrl !== 'string' || !baseUrl.startsWith('file:')) {
+        throw new Error(`loader.internal.import requires a file: baseUrl (cordis-plugin-loader contract); got ${String(baseUrl)}`)
+      }
+      if (typeof options !== 'object' || options === null) {
+        throw new Error(`loader.internal.import requires an options object (cordis-plugin-loader contract); got ${String(options)}`)
+      }
       const target = moduleMap.get(specifier)
       if (target === undefined) throw new Error(`unexpected Loader import: ${specifier}`)
       // 异步 getter（箭头函数，无 prototype）当场求值；类插件等其余值原样交给 Loader。

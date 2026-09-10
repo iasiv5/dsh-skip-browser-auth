@@ -6,6 +6,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { Readable } from 'node:stream'
 
 /** Default carrier cap for all HTTP RPC bodies: sized for the default
  * aggregate image limit (200 MiB) after base64 expansion plus envelope
@@ -13,8 +14,16 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
  * each body in memory, so this cap is also the per-request resident bound. */
 export const DEFAULT_MAX_REQUEST_BODY_BYTES = 300 * 1024 * 1024
 
-/** Transport-independent request handler consumed by the Host HTTP bridge. */
+/** Body handling selected by the carrier-neutral 0.1.5 Fetch registry. */
+export type RequestBodyMode = 'buffered' | 'streaming'
+
+/** Transport-independent request handler consumed by both host generations. */
 export interface FetchHandler {
+  /**
+   * Optional 0.1.5 body-mode selector. Legacy 0.1.2 handlers omit it and
+   * therefore remain fully buffered.
+   */
+  readonly requestBodyMode?: (request: { readonly method: string, readonly url: URL }) => RequestBodyMode
   /**
    * Handle one standard Fetch request.
    * @param request - request produced by the active transport bridge.
@@ -46,38 +55,60 @@ export async function bridge(
   res.on('close', () => {
     if (!res.writableEnded) abort.abort()
   })
-  const declaredLength = req.headers['content-length']
-  if (declaredLength !== undefined && Number(declaredLength) > maxRequestBodyBytes) {
-    res.writeHead(413, { connection: 'close' })
-    res.end()
-    req.destroy()
-    return
-  }
-  const chunks: Buffer[] = []
-  let received = 0
-  for await (const chunk of req) {
-    const buffer = chunk as Buffer
-    received += buffer.byteLength
-    if (received > maxRequestBodyBytes) {
+  /* v8 ignore next 3 -- `??` arms: node:http always sets url/method on server
+  requests; the fields are only optional on the client-side IncomingMessage type */
+  const url = new URL(req.url ?? '/', 'http://dsh.internal')
+  const method = req.method ?? 'GET'
+  const headers = Object.fromEntries(
+    Object.entries(req.headers).filter(([, value]) => typeof value === 'string') as [string, string][],
+  )
+  const bodyMode = apiHandler.requestBodyMode?.({ method, url }) ?? 'buffered'
+  let request: Request
+  if (bodyMode === 'buffered') {
+    const declaredLength = req.headers['content-length']
+    if (declaredLength !== undefined && Number(declaredLength) > maxRequestBodyBytes) {
       res.writeHead(413, { connection: 'close' })
       res.end()
       req.destroy()
       return
     }
-    chunks.push(buffer)
+    const chunks: Buffer[] = []
+    let received = 0
+    for await (const chunk of req) {
+      const buffer = chunk as Buffer
+      received += buffer.byteLength
+      if (received > maxRequestBodyBytes) {
+        res.writeHead(413, { connection: 'close' })
+        res.end()
+        req.destroy()
+        return
+      }
+      chunks.push(buffer)
+    }
+    request = new Request(url, {
+      method,
+      headers,
+      ...chunks.length > 0 ? { body: Buffer.concat(chunks) } : {},
+      signal: abort.signal,
+    })
+  } else {
+    request = new Request(url, {
+      method,
+      headers,
+      body: Readable.toWeb(req) as ReadableStream<Uint8Array>,
+      signal: abort.signal,
+      duplex: 'half',
+    } as RequestInit & { duplex: 'half' })
   }
-  /* v8 ignore next 3 -- `??` arms: node:http always sets url/method on server
-  requests; the fields are only optional on the client-side IncomingMessage type */
-  const request = new Request(new URL(req.url ?? '/', 'http://dsh.internal'), {
-    method: req.method ?? 'GET',
-    headers: Object.fromEntries(Object.entries(req.headers).filter(([, v]) => typeof v === 'string') as [string, string][]),
-    ...chunks.length > 0 ? { body: Buffer.concat(chunks) } : {},
-    signal: abort.signal,
-  })
   const response = await apiHandler.fetch(request)
-  res.writeHead(response.status, Object.fromEntries(response.headers.entries()))
+  const requestUnread = bodyMode === 'streaming' && !req.readableEnded
+  const responseHeaders = Object.fromEntries(response.headers.entries())
+  res.writeHead(response.status, requestUnread
+    ? { ...responseHeaders, connection: 'close' }
+    : responseHeaders)
   if (response.body === null) {
     res.end()
+    if (requestUnread) req.destroy()
     return
   }
   for await (const chunk of response.body) {
@@ -98,4 +129,5 @@ export async function bridge(
     }
   }
   res.end()
+  if (requestUnread) req.destroy()
 }

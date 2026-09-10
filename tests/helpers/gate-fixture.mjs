@@ -9,7 +9,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { GATE_ANCHOR_PACKAGES } from '../../lib/gate.js'
+import { GATE_ANCHOR_PACKAGES, GATE_VERSIONS } from '../../lib/gate.js'
 
 async function writePackageFixture(root, pkg, { segmentVersion, manifestVersion, layout }) {
   const short = pkg.slice(pkg.indexOf('/') + 1)
@@ -41,9 +41,10 @@ export async function writeGateFixtures(t, {
       ? { segmentVersion: base.segment ?? fallback, manifestVersion: base.manifest ?? fallback }
       : { segmentVersion: base, manifestVersion: base }
   }
+  const defaultVersion = GATE_VERSIONS[0]
   const [runtime, connection] = await Promise.all([
-    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[0], { ...normalize(runtimeVersion, '0.1.2-rc.1'), layout }),
-    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[1], { ...normalize(connectionVersion, '0.1.2-rc.1'), layout }),
+    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[0], { ...normalize(runtimeVersion, defaultVersion), layout }),
+    writePackageFixture(tmp, GATE_ANCHOR_PACKAGES[1], { ...normalize(connectionVersion, defaultVersion), layout }),
   ])
   const urls = {
     [`${GATE_ANCHOR_PACKAGES[0]}/package.json`]: runtime.url,

@@ -3,6 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
+import { Readable } from 'node:stream'
 import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from '../lib/bridge.js'
 
 // 假请求：EventEmitter + 预置 chunks 的异步迭代器 + destroy 记录。
@@ -60,6 +61,24 @@ test('streamed body accumulating over the limit gets 413 and destroys the reques
   await bridge(req, res, { fetch: async () => new Response('nope') }, 5)
   assert.equal(res.writeHeadCalls[0]?.status, 413)
   assert.equal(req.destroyed, true)
+})
+
+test('carrier-neutral streaming mode passes a Readable body without applying the buffered cap', async () => {
+  const req = Readable.from([Buffer.from('streamed-body')])
+  req.headers = { 'content-length': '13' }
+  req.url = '/api/stream'
+  req.method = 'POST'
+  const res = fakeRes()
+  let received
+  await bridge(req, res, {
+    requestBodyMode: () => 'streaming',
+    fetch: async (request) => {
+      received = await request.text()
+      return new Response('stream-ok', { status: 201 })
+    },
+  }, 1)
+  assert.equal(received, 'streamed-body')
+  assert.equal(res.writeHeadCalls[0]?.status, 201)
 })
 
 test('a normal JSON POST delivers the full body and the response passes through', async () => {

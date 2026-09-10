@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import yaml from 'js-yaml'
 import {
   CONNECTION_PACKAGE,
+  GATE_PROFILE_EXPRESSION,
   GATE_PROBE_EXPRESSION,
   GATE_ROW_ALLOWED_EXPRESSION,
 } from '../lib/gate.js'
@@ -69,7 +70,10 @@ test('row 2 inserts the plugin row with the negated row gate', () => {
   assert.equal(inserted.name, '@iasiv5/dsh-skip-browser-auth')
   assert.deepEqual(inserted.inject, ['webRuntime'])
   assert.deepEqual(inserted.disabled, { __jsExpr: `!(${GATE_ROW_ALLOWED_EXPRESSION})` })
-  assert.deepEqual(inserted.config, { trustedHosts: { __jsExpr: 'ctx.webRuntime.trustedHosts' } })
+  assert.deepEqual(inserted.config, {
+    trustedHosts: { __jsExpr: 'ctx.webRuntime.trustedHosts' },
+    compatibilityProfile: { __jsExpr: GATE_PROFILE_EXPRESSION },
+  })
 })
 
 test('active composition: the two rows evaluate exclusively (official disabled, plugin enabled)', async (t) => {
@@ -81,6 +85,23 @@ test('active composition: the two rows evaluate exclusively (official disabled, 
   const ctx = activeRowCtx(official, urls)
   assert.equal(evaluateWith(ctx, patchList[0].disabled.__jsExpr), true)
   assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), false)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].config.compatibilityProfile.__jsExpr), 'legacy-web-v1')
+})
+
+test('patch probe identifies and activates the rc15 profile', async (t) => {
+  const { urls } = await writeGateFixtures(t, {
+    runtimeVersion: '0.1.5-rc.1',
+    connectionVersion: '0.1.5-rc.1',
+  })
+  const official = {
+    options: { id: 'connection', name: CONNECTION_PACKAGE },
+    disabled: true,
+  }
+  const ctx = activeRowCtx(official, urls)
+  assert.equal(evaluateWith(ctx, GATE_PROFILE_EXPRESSION), 'carrier-neutral-v2')
+  assert.equal(evaluateWith(ctx, patchList[0].disabled.__jsExpr), true)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), false)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].config.compatibilityProfile.__jsExpr), 'carrier-neutral-v2')
 })
 
 test('plugin row stays dormant when the official row is not disabled or its name drifts', async (t) => {

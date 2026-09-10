@@ -1,8 +1,8 @@
 // 构建脚本：tsc 编译 src/ → lib/host.js；从 lib/gate.js 常量生成
-// cordis.patch.yml；官方 client 发布产物不可变 re-ID → lib/client.js；产物断言。
-// 固定流程：tsc → write-patch → client re-ID。
+// cordis.patch.yml；由 build-client-variants.mjs 生成 profile-aware lib/client.js。
+// 固定流程：tsc → write-patch → 双代际 client dispatcher → 产物断言。
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
@@ -27,53 +27,20 @@ function countOccurrences(text, needle) {
   return text.split(needle).length - 1
 }
 
-// ② client 半区：官方发布产物已是 window.__ModuleLoader__.load({ id, factory })
-//    最终 wrapper，不可 import / 再打包，只做精确 re-ID。
-//    六个锚点串各恰好出现 1 次是替换安全性的前提，先断言再动手。
-const CONNECTION_PACKAGE = '@deepseek-ai/dsh-client-connection'
-const OFFICIAL_ID_LINE = `id: "${CONNECTION_PACKAGE}"`
-const NEW_ID_LINE = 'id: "@iasiv5/dsh-skip-browser-auth"'
-const ANCHORS = [
-  'window.__ModuleLoader__.load({', // wrapper 开头
-  OFFICIAL_ID_LINE, // 注册 id（唯一替换点）
-  'dsh-client-connection', // 包名仅出现于注册 id 一处
-  'exports.apply = apply',
-  'exports.inject = inject',
-  'return module.exports',
-]
+// ② client 半区：分别封装官方 0.1.2 与 0.1.5 factory，由 profile global 显式选择。
+execFileSync(process.execPath, [join(root, 'scripts', 'build-client-variants.mjs')], { cwd: root, stdio: 'inherit' })
 
-const officialClientPath = require.resolve('@deepseek-ai/dsh-client-connection/client')
-const officialClient = readFileSync(officialClientPath, 'utf8')
-for (const anchor of ANCHORS) {
-  const count = countOccurrences(officialClient, anchor)
-  if (count !== 1) {
-    throw new Error(`anchor appears ${count} times (expected exactly 1): ${JSON.stringify(anchor)}`)
-  }
-}
-
-// 精确 re-ID：仅替换单处注册 id，其余字节不变。
-let clientOutput = officialClient.replace(OFFICIAL_ID_LINE, NEW_ID_LINE)
-if (countOccurrences(clientOutput, OFFICIAL_ID_LINE) !== 0) {
-  throw new Error('original registration id still present after re-ID')
-}
-if (countOccurrences(clientOutput, NEW_ID_LINE) !== 1) {
-  throw new Error('new registration id must appear exactly once after re-ID')
-}
-
+// ③ 产物断言：client 以 wrapper 开头、含插件 id；host 入口存在。
 const libDir = join(root, 'lib')
-mkdirSync(libDir, { recursive: true })
-writeFileSync(join(libDir, 'client.js'), clientOutput)
-
-// ③ 产物断言：client 以 wrapper 开头、含新 id；host 入口存在。
 const writtenClient = readFileSync(join(libDir, 'client.js'), 'utf8')
 if (!writtenClient.startsWith('window.__ModuleLoader__.load({')) {
   throw new Error('lib/client.js must start with the ModuleLoader wrapper')
 }
-if (!writtenClient.includes(NEW_ID_LINE)) {
-  throw new Error('lib/client.js must contain the new registration id')
+if (countOccurrences(writtenClient, 'id: "@iasiv5/dsh-skip-browser-auth"') !== 1) {
+  throw new Error('lib/client.js must contain exactly one plugin registration id')
 }
 if (!existsSync(join(libDir, 'host.js'))) {
   throw new Error('lib/host.js missing after tsc build')
 }
 
-console.log('build: lib/host.js + lib/client.js written, assertions passed')
+console.log('build: lib/host.js + profile-aware lib/client.js written, assertions passed')
