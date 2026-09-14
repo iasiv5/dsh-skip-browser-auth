@@ -1,7 +1,7 @@
 {
   "name": "@iasiv5/dsh-skip-browser-auth",
-  "version": "0.2.1",
-  "description": "DSH 0.1.2-rc.1、0.1.5-rc.1 与 0.1.5-rc.2 的分代兼容插件：按精确 compatibility profile 自动跳过 BrowserAuth；其它版本自动休眠，不修改任何 DSH 本体与机制",
+  "version": "0.2.2",
+  "description": "替换官方 Connection 提供方跳过 BrowserAuth，免输 Token；已适配 0.1.2-rc.1 与 0.1.5-rc.1/rc.2，详见仓库。",
   "keywords": [
     "dsh",
     "deepseek-harness",
