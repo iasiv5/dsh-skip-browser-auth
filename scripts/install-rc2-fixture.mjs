@@ -38,6 +38,13 @@ execFileSync('npm', [
   'dsh-client-connection-rc2@npm:@deepseek-ai/dsh-client-connection@0.1.1-rc.2',
   'frontend-static-rc2@npm:@deepseek-ai/dsh-host-frontend-static@0.1.1-rc.2',
   '@deepseek-ai/dsh-host-apiproxy@0.1.1-rc.2',
+  // apiproxy 0.1.1-rc.2 链的未声明传递依赖（上游打包缺陷：lib 静态 import 但
+  // dependencies 未声明，旧树里靠历史解析恰好提升到根）。repo .npmrc
+  // legacy-peer-deps=true 后干净重解析不再顺带装它们，须在此显式补齐。
+  '@deepseek-ai/dsh-timeout@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage-domain@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage@0.1.1-rc.2',
+  '@deepseek-ai/dsh-agent-presets@0.1.1-rc.2',
 ], { cwd: root, stdio: 'inherit', env: childEnv })
 
 // 证明 fixture 安装未改动依赖清单与 lockfile；失败即整体失败。

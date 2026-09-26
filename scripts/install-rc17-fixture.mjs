@@ -45,6 +45,18 @@ execFileSync('npm', [
   'dsh-client-connection-rc171@npm:@deepseek-ai/dsh-client-connection@0.1.7-rc.1',
   'frontend-static-rc171@npm:@deepseek-ai/dsh-host-frontend-static@0.1.7-rc.1',
   'webserver-rc171@npm:@deepseek-ai/dsh-host-webserver@0.1.7-rc.1',
+  // 0.1.7 connection 的 peer 链（repo .npmrc legacy-peer-deps=true 后 npm 不再
+  // 自动安装 peer，必须显式列出）：connection → peer dsh-scope → peer
+  // dsh-invariants。取 rc.2 锚点版本；rc171 别名 peer 请求 0.1.7-rc.1，
+  // 两版代码逐字节一致（§5.5），共享同一份 scope 运行时无行为差异。
+  '@deepseek-ai/dsh-scope@0.1.7-rc.2',
+  '@deepseek-ai/dsh-invariants@0.1.7-rc.2',
+  // rc2 脚本补齐的 apiproxy 0.1.1-rc.2 未声明传递依赖；本脚本是 test:all 的
+  // 最后一步，重列一份防止前序脚本的 --no-save 安装在本步被重整化清除。
+  '@deepseek-ai/dsh-timeout@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage-domain@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage@0.1.1-rc.2',
+  '@deepseek-ai/dsh-agent-presets@0.1.1-rc.2',
 ], { cwd: root, stdio: 'inherit', env: childEnv })
 
 for (const file of trackedFiles) {
