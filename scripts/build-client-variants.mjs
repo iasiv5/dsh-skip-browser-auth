@@ -22,6 +22,11 @@ const VARIANTS = [
     label: 'rc15',
     specifier: 'dsh-client-connection-rc15/client',
   },
+  {
+    profileId: 'carrier-neutral-v3',
+    label: 'rc17',
+    specifier: 'dsh-client-connection-rc17/client',
+  },
 ]
 
 function countOccurrences(text, needle) {

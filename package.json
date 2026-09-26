@@ -1,7 +1,7 @@
 {
   "name": "@iasiv5/dsh-skip-browser-auth",
-  "version": "0.2.2",
-  "description": "替换官方 Connection 提供方跳过 BrowserAuth，免输 Token；已适配 0.1.2-rc.1 与 0.1.5-rc.1/rc.2，详见仓库。",
+  "version": "0.3.0",
+  "description": "替换官方 Connection 提供方跳过 BrowserAuth，免输 Token；已适配 0.1.2-rc.1、0.1.5-rc.1/rc.2 与 0.1.7-rc.2，详见仓库。",
   "keywords": [
     "dsh",
     "deepseek-harness",
@@ -41,7 +41,8 @@
     "test": "node --test tests/*.test.mjs tests/composition/*.test.mjs",
     "test:rc2-fixture": "node scripts/install-rc2-fixture.mjs",
     "test:rc15-fixture": "node scripts/install-rc15-fixture.mjs",
-    "test:all": "npm run test:rc2-fixture && npm run test:rc15-fixture && npm run build && npm run typecheck && npm test",
+    "test:rc17-fixture": "node scripts/install-rc17-fixture.mjs",
+    "test:all": "npm run test:rc2-fixture && npm run test:rc15-fixture && npm run test:rc17-fixture && npm run build && npm run typecheck && npm test",
     "prepare": "npm run build"
   },
   "dsh": {
@@ -59,11 +60,12 @@
     "@deepseek-ai/schemastery": "*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/cordis": "4.0.4",
     "@deepseek-ai/cordis-plugin-include": "1.0.7",
     "@deepseek-ai/cordis-plugin-loader": "1.0.3",
     "@deepseek-ai/dsh-client-connection": "0.1.2-rc.1",
     "dsh-client-connection-rc15": "npm:@deepseek-ai/dsh-client-connection@0.1.5-rc.1",
+    "dsh-client-connection-rc17": "npm:@deepseek-ai/dsh-client-connection@0.1.7-rc.2",
     "@deepseek-ai/dsh-credentials": "0.1.2-rc.1",
     "@deepseek-ai/dsh-credentials-local": "0.1.2-rc.1",
     "@deepseek-ai/dsh-host-frontend-static": "0.1.2-rc.1",

@@ -12,6 +12,7 @@
 | --- | --- | --- | --- | --- |
 | `legacy-web-v1` | `0.1.2-rc.1` + `0.1.2-rc.1` | legacy webserver：`/api` prefix + buffered bridge | rc12 官方 client | ✅ active |
 | `carrier-neutral-v2` | `0.1.5-rc.1` + `0.1.5-rc.1`；`0.1.5-rc.2` + `0.1.5-rc.2` | carrier-neutral：runtime module + requestBodyMode + RPC carrier | rc15 官方 client | ✅ active（代码和真实 npm fixture 已验证；真实 DSH 部署仍需执行清单。rc.2 为 rc.1 的依赖版本对齐重发布，审计见 COMPATIBILITY.md §5.3） |
+| `carrier-neutral-v3` | `0.1.7-rc.2` + `0.1.7-rc.2` | carrier-neutral-017：admit()/OperatorPeer + `connection/request` waterfall + mount-preserving BrowserAuth | rc17 官方 client | ✅ active（真实 npm fixture 组合 + 2026-09-26 本机 0.1.7-rc.2 实机 checklist + 回滚演练，见下文与 COMPATIBILITY.md §5.4） |
 | — | 混合版本、未知版本、未实现 profile | — | — | 😴 dormant |
 
 以下组合不得激活：
@@ -21,6 +22,8 @@ runtime=0.1.2-rc.1 + connection=0.1.5-rc.1
 runtime=0.1.5-rc.1 + connection=0.1.2-rc.1
 runtime=0.1.5-rc.1 + connection=0.1.5-rc.2（同代际跨 patch 混合）
 runtime=0.1.5-rc.2 + connection=0.1.5-rc.1
+runtime=0.1.5-rc.2 + connection=0.1.7-rc.2（跨代际混合）
+runtime=0.1.7-rc.2 + connection=0.1.5-rc.2（跨代际混合）
 ```
 
 profile 数据源位于 `src/compatibility.ts`。`src/gate.ts` 从 profile pairs 生成 `GATE_PROFILE_EXPRESSION`、boolean activation probe 和 row binding expression；`cordis.patch.yml` 把 profile id 传入插件行。host adapter 与 client dispatcher 都消费同一个 profile id，不各自猜测版本。
@@ -104,19 +107,22 @@ sudo systemctl restart deepseek-harness.service
 | --- | --- | --- | --- |
 | 0.1.2 pair + `legacy-web-v1` | `disabled: true` | `disabled: false` | 旧版 `/api` prefix、buffered bridge、rc12 client、固定 warning |
 | 0.1.5 pair + `carrier-neutral-v2` | `disabled: true` | `disabled: false` | carrier-neutral runtime、requestBodyMode、exact Fetch POST、RPC carrier、rc15 client、固定 warning |
+| 0.1.7 pair + `carrier-neutral-v3` | `disabled: true` | `disabled: false` | carrier-neutral-017 runtime、admit()/OperatorPeer、`connection/request` waterfall、mount-preserving token 清理（303 `./`）、rc17 client、固定 warning |
 | 0.1.2 runtime + 0.1.5 connection | 活跃 | dormant | 官方行为，不提供替代服务 |
 | 0.1.5 runtime + 0.1.2 connection | 活跃 | dormant | 官方行为，不提供替代服务 |
+| 0.1.5 ↔ 0.1.7 任一方向混合 | 活跃 | dormant | 官方行为，不提供替代服务 |
 | 未知版本对 | 活跃 | dormant | 官方行为分毫不变 |
 | active pair + runtime/manifest drift | 不稳定 | backstop fail loud | 不创建服务、不注册 route、不输出 active warning |
 | active pair + 官方行 name mismatch | 活跃 | dormant | patch name guard 防止冲突 |
 | active pair + 后续 patch 强制官方行 disabled | 视 gate probe | probe/row binding 仍需为真 | 未知 profile 不会被后续 patch 强行复活 |
 | active profile + client global 缺失 | host 可拒绝/client fail loud | 不猜测 client variant | 不把旧 bundle 冒充新 bundle |
+| `carrier-neutral-v3` + 缺 `admit()` 的模块（direct 上下文 pinned 0.1.2） | — | apply fail loud | 不降级旧实现、不猜测（见 host-apply 测试） |
 
 ## 测试说明
 
 ```sh
 npm run test:all
-# 等价于：安装 rc2 fixture + 安装 rc2/rc15 双代际 fixture + build + typecheck + npm test
+# 等价于：安装 rc2 fixture + 安装 rc2/rc15/rc17 三代际 fixture + build + typecheck + npm test
 ```
 
 `test:rc2-fixture` 和 `test:rc15-fixture` 需要 npm 网络访问，使用 alias、`--no-save`、`--package-lock=false` 和 `--ignore-scripts`；脚本以安装前后快照证明不修改 `package.json` 与 `package-lock.json`。rc15 fixture 脚本会同时保留 rc2 与 rc15 aliases，避免 npm peer resolver 在顺序安装时删除上一代。
@@ -132,7 +138,7 @@ npm run test:all
 
 ## 已知限制
 
-- 真实 DSH `0.1.5-rc.1` / `0.1.5-rc.2` 宿主部署的 active checklist 仍需在对应机器上执行；当前仓库已用真实 npm 0.1.5-rc.1/rc.2 packages 完成 host/client/route 组合验证，但不能把 fixture 结果等同于真实部署结果。
+- 真实 DSH `0.1.5-rc.1` / `0.1.5-rc.2` 宿主部署的 active checklist 仍需在对应机器上执行；当前仓库已用真实 npm 0.1.5-rc.1/rc.2 packages 完成 host/client/route 组合验证，但不能把 fixture 结果等同于真实部署结果。（0.1.7-rc.2 的实机 checklist 已于 2026-09-26 完成，见上文记录。）
 - 完整浏览器组图 e2e（client-modules 生产组图、实际浏览器页面加载）仍由 dispatcher materialization、index-inject boot marker 和真实组合测试兜底，未覆盖所有 UI feature。
 - 0.1.5 官方 release 还包含 Session V3、Session lifecycle、Agent/Inbox/Web panel 等与本插件无关的其他 breaking changes；本插件只声明 Connection/BrowserAuth replacement 相关 profile 兼容性。
 - profile 选择故意 fail-closed：当未来 DSH 改动但尚未建立新 adapter/client variant 时，插件会 dormant，而不会尝试“尽量运行”。
@@ -204,3 +210,21 @@ npm run test:all
    ```
 
 真实 active 结果应记录到本节或独立运维记录中，不能用 synthetic fixture 结果替代。
+
+## active 实机验证记录：0.1.7-rc.2 / carrier-neutral-v3（2026-09-26）
+
+宿主：本机 `deepseek-harness.service`（dsh `0.1.7-rc.2`，cordis 4.0.4 / loader 1.0.5，loopback 3080 + dsh-auth Caddy edge）。安装方式：本地 checkout `dsh plugin --profile web add <repo>`（file: link，0.3.0）。验证协议同上：安装 + 重启 → checklist 逐项 → 卸载回滚演练 → 重装恢复。重启时间锚 14:41:08 / 14:48:1x / 14:48:39。
+
+| # | 检查项 | 命令/位置 | 结果 |
+| --- | --- | --- | --- |
+| 1 | profile 行存在 | `dsh --profile web --dump-config` | `trusted-connection` 行 + `compatibilityProfile`（表达式形态）✅ |
+| 2 | 首页免 token | `GET http://127.0.0.1:3080/` | `200` ✅ |
+| 3 | token 清理 | `GET /?token=x` | `303`，原始 `location: ./`（mount-preserving）✅ |
+| 4 | 无 cookie API | `POST /api/$events/result`（真实 api-gateway 拦截器认领的生产端点） | `200` + `{"type":"server-response",...}` 业务 envelope（链路：栅栏→admit→waterfall→bridge→拦截器）✅；`POST /api/session.list` → `404`（非 401/403，端点未被认领）✅ |
+| 5 | 固定 warning | journal since 重启锚 | `BrowserAuth has been skipped` 出现 ✅ |
+| 6 | v3 专项 | 启动 URL / 栅栏负例 | journal 打印 `dsh web: http://127.0.0.1:3080/`（无 `?token=`，`authenticatedUrl` stub 生效，对比升级前 14:17 boot 带 token）✅；evil Host `POST /api/$events/result` → `403` ✅ |
+| 7 | 回滚演练 | `dsh plugin --profile web remove` + 重启 | `GET /` → `401 Unauthorized`（官方 BrowserAuth 完整恢复）✅；重装 + 重启后 4s 恢复 `200`、warning ×1、`location: ./`、`$events/result` 200 ✅ |
+
+备注：dedicated RPC channel 非 405 未在实机复测——0.1.7 生产生态（api-gateway）只使用共享 `/api` 拦截器与 `/api/remote.mux` WebSocket route，无 dedicated channel 消费方；该路径由真实 npm fixture 组合测试覆盖（`tests/composition/active-rc17.test.mjs`）。
+
+另记录（与本插件无关，见 COMPATIBILITY.md §6 末段）：同 boot 的 `dsh-auth` `/auth/login` TypeError（`ctx.settings.get` rc.1 shim vs 0.1.7 settings API）、`modsearch` settings 报错、`copilot-authorization` 服务重名——三者均不消费 connection 服务。

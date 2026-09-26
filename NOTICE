@@ -5,8 +5,9 @@ This package includes or adapts MIT-licensed code from DeepSeek Harness
 (@deepseek-ai/dsh-client-connection and related packages, the "Upstream
 Code"):
 
-  - lib/client.js is an unmodified copy of the official published client
-    bundle, re-identified only by its registration id;
+  - lib/client.js embeds the factory bodies of the official published client
+    bundles (one per supported DSH generation), unmodified and re-identified
+    only by its registration id;
   - src/trust-fence.ts and src/bridge.ts are ported from the official
     source;
   - src/index.ts and src/trusted-auth.ts follow the semantics of the

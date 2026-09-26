@@ -10,6 +10,7 @@
 
 import { isTrustedApiRequest } from './trust-fence.js'
 import type { ConnectionTrustRequest } from './trust-fence.js'
+import type { BrowserAuthSemantics } from './compatibility.js'
 
 /** Root/index request facts used by the browser-token exchange. */
 export interface ConnectionIndexRequest extends ConnectionTrustRequest {
@@ -37,11 +38,20 @@ const TOKEN_QUERY = 'token'
 /**
  * Create the three-method stub consumed by the official HostConnectionService.
  * @param trustedHosts - non-loopback authorities this deployment serves: exact `host:port`, or port-less `host` matching any port.
+ * @param semantics - the host generation's BrowserAuth URL contract: `root`
+ * (0.1.2/0.1.5, app at `/`) or `mount-preserving` (0.1.7, app may mount at a
+ * sub-path). Selected by the compatibility profile, never guessed.
  * @returns authentication owner with trusted-network semantics for all three methods.
  */
-export function createTrustedAuth(trustedHosts: readonly string[]): TrustedAuth {
+export function createTrustedAuth(
+  trustedHosts: readonly string[],
+  semantics: BrowserAuthSemantics = 'root',
+): TrustedAuth {
+  // mount-preserving：官方 0.1.7 的清理重定向目标是目录相对 `./`，
+  // 应用可以挂在子路径上；root：官方 0.1.2/0.1.5 一律回到 `/`。
+  const cleanLocation = semantics === 'mount-preserving' ? './' : '/'
   return {
-    // 请求已通过 /api 侧的 requestRejection 信任栅栏；此处恒真，
+    // 请求已通过 /api 侧的 requestRejection/admit 信任栅栏；此处恒真，
     // 使官方 service 不再叠加 401 身份层。
     isAuthenticated(_request: ConnectionTrustRequest): boolean {
       return true
@@ -63,7 +73,7 @@ export function createTrustedAuth(trustedHosts: readonly string[]): TrustedAuth 
       if (url.searchParams.has(TOKEN_QUERY) && req.method === 'GET' && url.pathname === '/') {
         res.writeHead(303, {
           'cache-control': 'no-store',
-          'location': '/',
+          'location': cleanLocation,
           'referrer-policy': 'no-referrer',
         })
         res.end()
@@ -72,10 +82,12 @@ export function createTrustedAuth(trustedHosts: readonly string[]): TrustedAuth 
       return true
     },
 
-    // 无身份层：返回干净的应用根 URL，不附加任何 token。
+    // 无身份层：返回干净的应用 URL，不附加任何 token。
+    // root：官方 0.1.2/0.1.5 语义，重写到应用根 `/`；
+    // mount-preserving：官方 0.1.7 语义，保留调用方的 mount，仅去掉 query/hash。
     authenticatedUrl(baseUrl: string): string {
       const url = new URL(baseUrl)
-      url.pathname = '/'
+      if (semantics !== 'mount-preserving') url.pathname = '/'
       url.search = ''
       url.hash = ''
       return url.href

@@ -73,3 +73,28 @@ test('isAuthenticated is always true', () => {
 test('authenticatedUrl strips search and hash and pins the root path', () => {
   assert.equal(auth.authenticatedUrl('http://127.0.0.1:3080/?token=x#frag'), 'http://127.0.0.1:3080/')
 })
+
+// 0.1.7 mount-preserving 语义：由 carrier-neutral-v3 的 profile 显式选择。
+const mountAuth = createTrustedAuth(['app.internal'], 'mount-preserving')
+
+test('mount-preserving: a token on GET / is cleaned up with a 303 to ./', () => {
+  const res = fakeRes()
+  assert.equal(mountAuth.authorizeIndex(req({ host: 'app.internal' }, { method: 'GET', url: '/?token=x' }), res), false)
+  assert.equal(res.calls.writeHead[0]?.status, 303)
+  assert.equal(res.calls.writeHead[0]?.headers['location'], './')
+  assert.equal(res.calls.writeHead[0]?.headers['cache-control'], 'no-store')
+  assert.equal(res.calls.ended, true)
+})
+
+test('mount-preserving: authenticatedUrl keeps the mount and only strips query/hash', () => {
+  assert.equal(mountAuth.authenticatedUrl('http://127.0.0.1:3080/?token=x#frag'), 'http://127.0.0.1:3080/')
+  assert.equal(mountAuth.authenticatedUrl('http://app.internal/dsh/?token=x#frag'), 'http://app.internal/dsh/')
+})
+
+test('mount-preserving: fence and admission behave identically to the root semantics', () => {
+  const res = fakeRes()
+  assert.equal(mountAuth.authorizeIndex(req({ host: 'evil.example' }), res), false)
+  assert.equal(res.calls.writeHead[0]?.status, 403)
+  assert.equal(mountAuth.authorizeIndex(req({ host: 'app.internal' }), fakeRes()), true)
+  assert.equal(mountAuth.isAuthenticated(req({ host: 'evil.example' })), true)
+})

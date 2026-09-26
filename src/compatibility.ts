@@ -9,8 +9,19 @@
  */
 
 export type CompatibilityStatus = 'active' | 'candidate'
-export type HostAdapterKind = 'legacy-web' | 'carrier-neutral'
-export type ClientVariant = 'rc12' | 'rc15'
+export type HostAdapterKind = 'legacy-web' | 'carrier-neutral' | 'carrier-neutral-017'
+export type ClientVariant = 'rc12' | 'rc15' | 'rc17'
+
+/**
+ * BrowserAuth stub semantics consumed by a profile's host generation.
+ *
+ * - `root`: 0.1.2/0.1.5 generation — the app lives at `/`; the token-clean
+ *   redirect targets `/` and `authenticatedUrl` rewrites the pathname to `/`.
+ * - `mount-preserving`: 0.1.7 generation — the app may be mounted at a
+ *   sub-path; the redirect targets the directory-relative `./` and
+ *   `authenticatedUrl` preserves the caller's mount.
+ */
+export type BrowserAuthSemantics = 'root' | 'mount-preserving'
 
 export interface CompatibilityPair {
   readonly runtime: string
@@ -24,6 +35,7 @@ export const COMPATIBILITY_PROFILES = [
     hostAdapter: 'legacy-web',
     clientVariant: 'rc12',
     requiresRecoveryGlobal: false,
+    browserAuthSemantics: 'root',
     status: 'active',
   },
   {
@@ -39,8 +51,26 @@ export const COMPATIBILITY_PROFILES = [
     hostAdapter: 'carrier-neutral',
     clientVariant: 'rc15',
     requiresRecoveryGlobal: true,
+    browserAuthSemantics: 'root',
     // Promoted after the carrier-neutral host/client adapter and fixture path
     // are implemented; real deployment validation remains documented separately.
+    status: 'active',
+  },
+  {
+    // 0.1.7-rc.2 is a real contract change, not a republish: the shared /api
+    // route admits through the new OperatorPeer (`admit()`) and wraps the
+    // bridge in the `connection/request` waterfall; BrowserAuth consumption
+    // becomes mount-preserving; the browser client bundle is rewritten. Audited
+    // package-by-package in docs/COMPATIBILITY.md §5.4.
+    id: 'carrier-neutral-v3',
+    pairs: [{ runtime: '0.1.7-rc.2', connection: '0.1.7-rc.2' }],
+    hostAdapter: 'carrier-neutral-017',
+    clientVariant: 'rc17',
+    requiresRecoveryGlobal: true,
+    browserAuthSemantics: 'mount-preserving',
+    // Promoted together with the adapter/client implementation; the fixture
+    // composition suite and the real 0.1.7-rc.2 deployment checklist are the
+    // promotion evidence (docs/COMPATIBILITY.md §5.4, docs/DESIGN.md).
     status: 'active',
   },
 ] as const

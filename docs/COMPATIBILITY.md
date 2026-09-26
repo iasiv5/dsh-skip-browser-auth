@@ -192,6 +192,36 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 第 6 条（真实 DSH `0.1.5-rc.2` 宿主 active checklist）待宿主升级后按 DESIGN 清单执行。
 
+### 5.4 审计记录：`0.1.7-rc.2` 新增 `carrier-neutral-v3`（2026-09-26）
+
+结论：**`0.1.7-rc.2` 是真实契约变化而非重发布，按 §5.2 新增 profile `carrier-neutral-v3`、host adapter `carrier-neutral-017` 与 client variant `rc17`**，未改动既有代际。
+
+审计方法：从 npm 拉取四个锚点包的 `0.1.5-rc.2` 与 `0.1.7-rc.2` tarball 做 `diff -r` 逐包对比（四包全部有真实代码差异，直接排除 §5.1 加入既有代际的可能），再对 connection 包 `lib/index.js` 做逐行对照。与插件相关的契约差异：
+
+| 维度 | `0.1.5-rc.2` | `0.1.7-rc.2` | v3 适配 |
+| --- | --- | --- | --- |
+| `HostConnectionService` 构造器 | `(ctx, trustedHosts, browserAuth)` | 相同 | 沿用 runtime module 实例化 |
+| 准入 | `requestRejection(req)` | 新增 `admit(req)` → `{peer}`/`{rejection}`；内部经新依赖 `dsh-scope` 建 `OperatorPeer`，作为 RPC handler 第 4 参传入 | route 改走 `admit()`；peer 语义由 runtime module 自带 |
+| 共享 `/api` route | `bridge()` 直调 | `webCtx.waterfall('connection/request', req, res, next)` 包裹 bridge（listener 可否决/改写请求） | adapter 复刻 waterfall；经真实组合测试断言 sibling 插件监听器可见、403 拒绝不进瀑布 |
+| `register(owner, channel, handler)` | `owner.effect(() => owner.webServer.register(route))` | 结构相同 | v2 的 405 修复（register owner 绑定到有 webServer 的 ctx）原样保留 |
+| BrowserAuth 消费 | `authenticatedUrl` 重写 pathname `/`；token 清理 303 → `/` | mount-preserving：保留 mount；303 → `./` | trusted-auth stub 新增 `mount-preserving` 语义，由 profile 显式选择（v1/v2 保持 `root`） |
+| RPC 响应 | JSON | 可携带 attachments（multipart），在 `rpcFetchHandler` 内部 | 对插件透明 |
+| 浏览器 client | 221KB bundle | 重写为 59KB；ModuleLoader 提取锚点各恰出现 1 次；globals 仍为 `__DSH_CONNECTION_RECOVERY__` + `__DSH_TRANSPORT__`（均可选）；无外部 require | 新 client variant `rc17` 机械提取，dispatcher 显式选择 |
+| `dsh-host-webserver` | — | 仅注释级 diff | 无 |
+| 官方 connection 行（web-app patch） | `id/name/inject:[webRuntime]/config` | 逐字段一致 | 行绑定 patch 结构不变 |
+| cordis / loader | 4.0.2 / 1.0.3 | 4.0.4 / 1.0.5；`waterfall` 两版同实现；loader internal v1/v2 `resolveSync` 契约逐字一致 | gate 双签名处理仍有效；devDeps cordis 升 4.0.4 以满足 rc17 peer `~4.0.4` 并保持单一实例 |
+
+新增测试（§5.2 第 3 步）：
+
+- `tests/composition/active-rc17.test.mjs`：真实 npm `0.1.7-rc.2` 三包组合——行状态、index profile marker + recovery global、303 `./`、dedicated RPC 200（405 回归）+ OperatorPeer 第 4 参、streaming Fetch route、`connection/request` 瀑布对 sibling 可见且仅覆盖共享 `/api`（与官方一致）、evil host 403、双向跨代际混合 dormant。
+- `tests/composition/npm-flat-rc17.test.mjs`：npm 扁平布局（dshm 形态）manifest 回退激活。
+- `tests/gate.test.mjs`：`0.1.7-rc.2` 精确对正例与跨代际混合负例。
+- `tests/trusted-auth.test.mjs`：`mount-preserving` 语义（303 `./`、URL 保留 mount、栅栏行为不变）。
+- `tests/host-apply.test.mjs`：direct 上下文 pinned 0.1.2 模块缺 `admit()` 时 fail loud（不猜测、不降级）。
+- `tests/manifest.test.mjs`：rc17 dev-only 别名不变量。
+
+第 4 条（布局/resolver/drift 测试）由全量 `npm run test:all`（新增 `test:rc17-fixture`）覆盖。第 5–6 条（真实部署 active checklist + 回滚演练）已于 2026-09-26 在本机 `0.1.7-rc.2` 宿主完成，记录见 `docs/DESIGN.md` 实机验证一节。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -203,11 +233,15 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 0.1.5 `connection.rpc.handle()` dedicated channel 不再返回 405
 - 0.1.5 exact `/api` streaming Fetch route
 - 0.1.5 recovery/profile index globals
+- 0.1.7-rc.2 真实 npm package carrier-neutral-v3 composition（§5.4：admit/OperatorPeer、waterfall、303 `./`、dedicated RPC 非 405、双向跨代际混合 dormant、npm flat 布局）
 - rc2 dormant 基线
-- 两个官方 client factory materialization 和 unknown profile fail-closed
-- `npm run test:all`：双代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。
+- 三个官方 client factory materialization 和 unknown profile fail-closed
+- `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。
+- 真实 DSH `0.1.7-rc.2` 宿主 active checklist + 卸载回滚演练（2026-09-26，见 `docs/DESIGN.md`）。
 
 尚未宣称：
 
 - 在真实运行 DSH `0.1.5-rc.1` 服务上的 active 部署结果。该验证应按 `docs/DESIGN.md` active checklist 执行并记录。
 - 在真实运行 DSH `0.1.5-rc.2` 服务上的 active 部署结果（升级宿主后按同一清单执行）。
+
+已知无关问题（非本插件职责，记录备查）：同宿主上第三方插件对 0.1.7 的不适配——`dsh-auth` 的 `/auth/login` 在 edge 请求下因 `ctx.settings.get()`（其源码自注的 rc.1 shim）对 0.1.7 settings API 抛 TypeError；`modsearch` 报 `scope.settings.register is not a function`（同一 settings API 变化）；`copilot-authorization` 与官方 `dsh-authorization` 服务重名冲突。定性依据：dsh-auth 代码不依赖 connection 服务（登录页渲染路径无 connection 消费）；该 TypeError 首次出现于 2026-09-26 宿主升级 0.1.7 之后，与本插件激活无关（升级后至插件激活前 `/auth/login` 零访问，TypeError 首次触发于插件激活 51 秒后的 edge 请求，与同 boot 的 modsearch/settings 报错同源）。未做卸载态下的 edge 复现差分。

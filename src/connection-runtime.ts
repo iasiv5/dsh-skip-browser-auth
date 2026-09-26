@@ -9,6 +9,12 @@ import type { FetchHandler } from './bridge.js'
 export interface RuntimeConnection {
   requestRejection(request: unknown): 401 | 403 | undefined
   createSharedFetchHandler(channel: string): FetchHandler
+  /**
+   * 0.1.7 admission seam: a request that passes the fence and authentication
+   * speaks for the operator Peer. Absent on 0.1.2/0.1.5 services; only the
+   * carrier-neutral-017 adapter may call it.
+   */
+  admit?(request: unknown): { peer?: unknown } | { rejection: 401 | 403 }
 }
 
 /** Runtime module shape shared by the 0.1.2 and 0.1.5 connection packages. */

@@ -191,6 +191,17 @@ test('missing loader service and fiber entry skips the backstop', async () => {
   assert.equal(routes.length, 1)
 })
 
+test('direct context cannot serve carrier-neutral-v3: the pinned module lacks admit() and must fail loud', async () => {
+  // direct（无 loader）上下文只有 pinned 0.1.2 副本，缺少 0.1.7 的 admit()
+  // 契约——v3 必须拒绝运行，绝不降级到旧实现或猜测（fail-closed）。
+  const { ctx, routes } = makeContext()
+  await assert.rejects(
+    apply(ctx, { trustedHosts: [], compatibilityProfile: 'carrier-neutral-v3' }),
+    /carrier-neutral-017 profile requires the 0.1.7 admit\(\) connection seam/,
+  )
+  assert.equal(routes.length, 0)
+})
+
 test('backstop negative: loader present but internal resolver missing fails loud', async () => {
   const { ctx, routes } = makeContext()
   const { self } = fakeSelfWithRow()

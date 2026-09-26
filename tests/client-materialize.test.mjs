@@ -60,8 +60,8 @@ function materializeProfile(profile) {
   return localRegistrations[0].factory(stubRequire)
 }
 
-test('dispatcher materializes the 0.1.2 and 0.1.5 client variants by explicit profile', () => {
-  for (const profile of ['legacy-web-v1', 'carrier-neutral-v2']) {
+test('dispatcher materializes the 0.1.2, 0.1.5 and 0.1.7 client variants by explicit profile', () => {
+  for (const profile of ['legacy-web-v1', 'carrier-neutral-v2', 'carrier-neutral-v3']) {
     const { inject, apply } = materializeProfile(profile)
     assert.equal(Array.isArray(inject), true)
     assert.equal(inject.length, 0)

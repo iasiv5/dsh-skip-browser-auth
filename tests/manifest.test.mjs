@@ -29,6 +29,12 @@ test('0.1.5 client build alias stays dev-only', () => {
   assert.equal(manifest.dependencies?.['dsh-client-connection-rc15'], undefined)
 })
 
+test('0.1.7 client build alias stays dev-only', () => {
+  const devDependencies = manifest.devDependencies ?? {}
+  assert.equal(devDependencies['dsh-client-connection-rc17'], 'npm:@deepseek-ai/dsh-client-connection@0.1.7-rc.2')
+  assert.equal(manifest.dependencies?.['dsh-client-connection-rc17'], undefined)
+})
+
 test('gate anchors never collide with declared runtime dependencies', () => {
   const dependencies = manifest.dependencies ?? {}
   for (const anchor of [GATE_RUNTIME_PACKAGE, CONNECTION_PACKAGE]) {
