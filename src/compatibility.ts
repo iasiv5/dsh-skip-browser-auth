@@ -57,13 +57,23 @@ export const COMPATIBILITY_PROFILES = [
     status: 'active',
   },
   {
-    // 0.1.7-rc.2 is a real contract change, not a republish: the shared /api
+    // 0.1.7 is a real contract change from 0.1.5, not a republish: the shared /api
     // route admits through the new OperatorPeer (`admit()`) and wraps the
     // bridge in the `connection/request` waterfall; BrowserAuth consumption
     // becomes mount-preserving; the browser client bundle is rewritten. Audited
     // package-by-package in docs/COMPATIBILITY.md §5.4.
+    //
+    // 0.1.7-rc.1 joined this generation after a byte-level audit (§5.5): every
+    // package the replacement touches (dsh-client-connection lib/+client/,
+    // dsh-host-webserver, dsh-scope, dsh-host-frontend-static) ships rc.2-identical
+    // code, the web-app patch's connection row is field-identical, and the runtime
+    // diff is chunk-hash renames plus diagnostics-only boot changes. The rc17
+    // client variant therefore serves both pairs, selected by this one profile id.
     id: 'carrier-neutral-v3',
-    pairs: [{ runtime: '0.1.7-rc.2', connection: '0.1.7-rc.2' }],
+    pairs: [
+      { runtime: '0.1.7-rc.1', connection: '0.1.7-rc.1' },
+      { runtime: '0.1.7-rc.2', connection: '0.1.7-rc.2' },
+    ],
     hostAdapter: 'carrier-neutral-017',
     clientVariant: 'rc17',
     requiresRecoveryGlobal: true,

@@ -35,6 +35,16 @@ test('0.1.7 client build alias stays dev-only', () => {
   assert.equal(manifest.dependencies?.['dsh-client-connection-rc17'], undefined)
 })
 
+test('rc171 stays a fixture-only alias (never a runtime dep or build anchor)', () => {
+  // rc171 只是组合测试 fixture 别名（真实 0.1.7-rc.1 包，--no-save 安装）；
+  // client variant 仍由 rc17 别名单一来源构建——rc.1 与 rc.2 的 client/ 逐字节
+  // 一致（docs/COMPATIBILITY.md §5.5），清单不得出现第二个 0.1.7 构建锚点。
+  const dependencies = manifest.dependencies ?? {}
+  const devDependencies = manifest.devDependencies ?? {}
+  assert.equal(dependencies['dsh-client-connection-rc171'], undefined)
+  assert.equal(devDependencies['dsh-client-connection-rc171'], undefined)
+})
+
 test('gate anchors never collide with declared runtime dependencies', () => {
   const dependencies = manifest.dependencies ?? {}
   for (const anchor of [GATE_RUNTIME_PACKAGE, CONNECTION_PACKAGE]) {

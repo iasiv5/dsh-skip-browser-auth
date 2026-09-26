@@ -39,6 +39,12 @@ execFileSync('npm', [
   'dsh-client-connection-rc17@npm:@deepseek-ai/dsh-client-connection@0.1.7-rc.2',
   'frontend-static-rc17@npm:@deepseek-ai/dsh-host-frontend-static@0.1.7-rc.2',
   'webserver-rc17@npm:@deepseek-ai/dsh-host-webserver@0.1.7-rc.2',
+  // rc.1 joined the 0.1.7 generation (docs/COMPATIBILITY.md §5.5): real rc.1
+  // packages under *-rc171 aliases let the composition suite exercise the
+  // second v3 pair and the same-generation cross-patch dormant negatives.
+  'dsh-client-connection-rc171@npm:@deepseek-ai/dsh-client-connection@0.1.7-rc.1',
+  'frontend-static-rc171@npm:@deepseek-ai/dsh-host-frontend-static@0.1.7-rc.1',
+  'webserver-rc171@npm:@deepseek-ai/dsh-host-webserver@0.1.7-rc.1',
 ], { cwd: root, stdio: 'inherit', env: childEnv })
 
 for (const file of trackedFiles) {

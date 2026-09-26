@@ -12,7 +12,7 @@
 | --- | --- | --- | --- | --- |
 | `legacy-web-v1` | `0.1.2-rc.1` + `0.1.2-rc.1` | legacy webserver：`/api` prefix + buffered bridge | rc12 官方 client | ✅ active |
 | `carrier-neutral-v2` | `0.1.5-rc.1` + `0.1.5-rc.1`；`0.1.5-rc.2` + `0.1.5-rc.2` | carrier-neutral：runtime module + requestBodyMode + RPC carrier | rc15 官方 client | ✅ active（代码和真实 npm fixture 已验证；真实 DSH 部署仍需执行清单。rc.2 为 rc.1 的依赖版本对齐重发布，审计见 COMPATIBILITY.md §5.3） |
-| `carrier-neutral-v3` | `0.1.7-rc.2` + `0.1.7-rc.2` | carrier-neutral-017：admit()/OperatorPeer + `connection/request` waterfall + mount-preserving BrowserAuth | rc17 官方 client | ✅ active（真实 npm fixture 组合 + 2026-09-26 本机 0.1.7-rc.2 实机 checklist + 回滚演练，见下文与 COMPATIBILITY.md §5.4） |
+| `carrier-neutral-v3` | `0.1.7-rc.1` + `0.1.7-rc.1`；`0.1.7-rc.2` + `0.1.7-rc.2` | carrier-neutral-017：admit()/OperatorPeer + `connection/request` waterfall + mount-preserving BrowserAuth | rc17 官方 client | ✅ active（真实 npm fixture 组合覆盖两个 pair + 2026-09-26 本机 0.1.7-rc.2 实机 checklist + 回滚演练，见下文与 COMPATIBILITY.md §5.4/§5.5。rc.1 与 rc.2 在插件契约面逐字节一致，审计见 §5.5） |
 | — | 混合版本、未知版本、未实现 profile | — | — | 😴 dormant |
 
 以下组合不得激活：
@@ -22,6 +22,10 @@ runtime=0.1.2-rc.1 + connection=0.1.5-rc.1
 runtime=0.1.5-rc.1 + connection=0.1.2-rc.1
 runtime=0.1.5-rc.1 + connection=0.1.5-rc.2（同代际跨 patch 混合）
 runtime=0.1.5-rc.2 + connection=0.1.5-rc.1
+runtime=0.1.7-rc.1 + connection=0.1.7-rc.2（同代际跨 patch 混合）
+runtime=0.1.7-rc.2 + connection=0.1.7-rc.1（同代际跨 patch 混合）
+runtime=0.1.5-rc.2 + connection=0.1.7-rc.1（跨代际混合）
+runtime=0.1.7-rc.1 + connection=0.1.5-rc.2（跨代际混合）
 runtime=0.1.5-rc.2 + connection=0.1.7-rc.2（跨代际混合）
 runtime=0.1.7-rc.2 + connection=0.1.5-rc.2（跨代际混合）
 ```
@@ -110,7 +114,7 @@ sudo systemctl restart deepseek-harness.service
 | 0.1.7 pair + `carrier-neutral-v3` | `disabled: true` | `disabled: false` | carrier-neutral-017 runtime、admit()/OperatorPeer、`connection/request` waterfall、mount-preserving token 清理（303 `./`）、rc17 client、固定 warning |
 | 0.1.2 runtime + 0.1.5 connection | 活跃 | dormant | 官方行为，不提供替代服务 |
 | 0.1.5 runtime + 0.1.2 connection | 活跃 | dormant | 官方行为，不提供替代服务 |
-| 0.1.5 ↔ 0.1.7 任一方向混合 | 活跃 | dormant | 官方行为，不提供替代服务 |
+| 0.1.5 ↔ 0.1.7 任一方向混合、0.1.7-rc.1 ↔ 0.1.7-rc.2 跨 patch 混合 | 活跃 | dormant | 官方行为，不提供替代服务 |
 | 未知版本对 | 活跃 | dormant | 官方行为分毫不变 |
 | active pair + runtime/manifest drift | 不稳定 | backstop fail loud | 不创建服务、不注册 route、不输出 active warning |
 | active pair + 官方行 name mismatch | 活跃 | dormant | patch name guard 防止冲突 |
@@ -133,12 +137,13 @@ npm run test:all
 - pnpm 路径段与 npm flat manifest fallback
 - legacy buffered bridge 与 carrier-neutral streaming bridge
 - 0.1.5 `connection.rpc.handle()` 真实 405 回归，以及 exact `/api` Fetch route
-- 两个 client factory 的 materialization、dispatcher、recovery global 和未知 profile fail-closed
+- 三个 client factory 的 materialization、dispatcher、recovery global 和未知 profile fail-closed
 - rc.2 dormant 基线、dispose/unload、Host/Origin/Fetch Metadata trust fence
+- 0.1.7-rc.1 真实 npm package carrier-neutral-v3 组合（full active checklist + 同代际跨 patch 混合双向 dormant，见 COMPATIBILITY.md §5.5）
 
 ## 已知限制
 
-- 真实 DSH `0.1.5-rc.1` / `0.1.5-rc.2` 宿主部署的 active checklist 仍需在对应机器上执行；当前仓库已用真实 npm 0.1.5-rc.1/rc.2 packages 完成 host/client/route 组合验证，但不能把 fixture 结果等同于真实部署结果。（0.1.7-rc.2 的实机 checklist 已于 2026-09-26 完成，见上文记录。）
+- 真实 DSH `0.1.5-rc.1` / `0.1.5-rc.2` / `0.1.7-rc.1` 宿主部署的 active checklist 仍需在对应机器上执行；当前仓库已用真实 npm 对应 packages 完成 host/client/route 组合验证，但不能把 fixture 结果等同于真实部署结果。（0.1.7-rc.2 的实机 checklist 已于 2026-09-26 完成，见上文记录。）
 - 完整浏览器组图 e2e（client-modules 生产组图、实际浏览器页面加载）仍由 dispatcher materialization、index-inject boot marker 和真实组合测试兜底，未覆盖所有 UI feature。
 - 0.1.5 官方 release 还包含 Session V3、Session lifecycle、Agent/Inbox/Web panel 等与本插件无关的其他 breaking changes；本插件只声明 Connection/BrowserAuth replacement 相关 profile 兼容性。
 - profile 选择故意 fail-closed：当未来 DSH 改动但尚未建立新 adapter/client variant 时，插件会 dormant，而不会尝试“尽量运行”。

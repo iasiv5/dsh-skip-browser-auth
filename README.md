@@ -1,14 +1,14 @@
 # @iasiv5/dsh-skip-browser-auth
 
 [![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skip-browser-auth?label=npm&color=cb3837)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
-[![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.2--rc.1_%7C_0.1.5--rc.1_%7C_0.1.5--rc.2_%7C_0.1.7--rc.2_verified-blue)](#兼容版本)
+[![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.2--rc.1_%7C_0.1.5--rc.1_%7C_0.1.5--rc.2_%7C_0.1.7--rc.1_%7C_0.1.7--rc.2_verified-blue)](#兼容版本)
 [![License](https://img.shields.io/github/license/iasiv5/dsh-skip-browser-auth?color=green)](./LICENSE)
 
 个人自用的 DSH Web 插件：在已验证的 DSH compatibility profile 上自动跳过 BrowserAuth，打开 Web 地址即可直接使用，**不必每次把启动 URL 里那串随机 token 抄进浏览器**。
 
-- **精确 profile 门控**：当前支持 `0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2` 与 `0.1.7-rc.2`，按 host/client 兼容代际分组；不是把所有版本塞进同一个实现。
+- **精确 profile 门控**：当前支持 `0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1` 与 `0.1.7-rc.2`，按 host/client 兼容代际分组；不是把所有版本塞进同一个实现。
 - **严格成对匹配**：runtime `@deepseek-ai/dsh` 与 `@deepseek-ai/dsh-client-connection` 必须组成已知版本对。混合版本、未知版本、profile 未实现或解析失败都会自动休眠。
-- **分代适配**：`0.1.2-rc.1` 使用 `legacy-web-v1`；`0.1.5-rc.1` 与 `0.1.5-rc.2` 使用 `carrier-neutral-v2`，包含 request body mode、RPC carrier 和对应浏览器 client variant 适配；`0.1.7-rc.2` 使用 `carrier-neutral-v3`，覆盖 0.1.7 的 `admit()`/OperatorPeer 准入、`connection/request` waterfall 与 mount-preserving BrowserAuth。
+- **分代适配**：`0.1.2-rc.1` 使用 `legacy-web-v1`；`0.1.5-rc.1` 与 `0.1.5-rc.2` 使用 `carrier-neutral-v2`，包含 request body mode、RPC carrier 和对应浏览器 client variant 适配；`0.1.7-rc.1` 与 `0.1.7-rc.2` 使用 `carrier-neutral-v3`，覆盖 0.1.7 的 `admit()`/OperatorPeer 准入、`connection/request` waterfall 与 mount-preserving BrowserAuth。
 - **不修改 DSH 本体与任何机制**：仅通过 DSH 官方插件 patch 机制替换 Connection 行；卸载或禁用插件并重启，即完全恢复官方行为。
 - **安全提醒**：跳过认证后，Web 对本机/可信网络内的访问不再有身份层，请勿把 DSH 端口暴露给不可信网络。
 
@@ -36,7 +36,7 @@ sudo systemctl restart deepseek-harness.service   # 按你的部署方式重启 
 它支持的精确 compatibility profile：
 - DSH 0.1.2-rc.1：legacy-web-v1
 - DSH 0.1.5-rc.1 / 0.1.5-rc.2：carrier-neutral-v2
-- DSH 0.1.7-rc.2：carrier-neutral-v3
+- DSH 0.1.7-rc.1 / 0.1.7-rc.2：carrier-neutral-v3
 其它版本或 runtime/connection 混合版本会自动休眠，不要强行处理。
 
 1. 先执行 dsh --version 告诉我当前 DSH 版本，然后照常安装：
@@ -44,7 +44,7 @@ sudo systemctl restart deepseek-harness.service   # 按你的部署方式重启 
 2. 重启 DSH Web 并轮询 http://127.0.0.1:3080 直到恢复 200
    （systemd 系统级部署：sudo systemctl restart deepseek-harness.service；
    user 级部署：systemctl --user restart dsh-web.service；端口以实际部署为准）。
-3. 若版本是 0.1.2-rc.1、0.1.5-rc.1、0.1.5-rc.2 或 0.1.7-rc.2：
+3. 若版本是 0.1.2-rc.1、0.1.5-rc.1、0.1.5-rc.2、0.1.7-rc.1 或 0.1.7-rc.2：
    确认 journal/日志中出现固定警告
    "BrowserAuth has been skipped"，并验证浏览器直接打开 Web 地址不再要求 token。
 4. 若版本不是精确白名单版本，或 profile/依赖契约不匹配：插件应自动休眠，
@@ -67,7 +67,8 @@ sudo systemctl restart deepseek-harness.service
 | `0.1.2-rc.1` + `0.1.2-rc.1` | `legacy-web-v1` | legacy `/api` prefix + 0.1.2 client | ✅ active |
 | `0.1.5-rc.1` + `0.1.5-rc.1` | `carrier-neutral-v2` | carrier-neutral HostConnectionService + 0.1.5 client | ✅ active（代码/真实 npm fixture 已验证；真实部署仍需按清单确认） |
 | `0.1.5-rc.2` + `0.1.5-rc.2` | `carrier-neutral-v2` | 同上（rc.2 为 rc.1 的重发布：代码逐字节一致） | ✅ active（npm diff 审计 + 真实 rc.2 npm fixture 组合测试已验证；真实部署仍需按清单确认） |
-| `0.1.7-rc.2` + `0.1.7-rc.2` | `carrier-neutral-v3` | carrier-neutral-017：admit()/OperatorPeer + `connection/request` waterfall + mount-preserving BrowserAuth + 0.1.7 client | ✅ active（真实 npm fixture 组合测试 + 2026-09-26 实机 checklist 与回滚演练，见 docs/DESIGN.md） |
+| `0.1.7-rc.1` + `0.1.7-rc.1` | `carrier-neutral-v3` | carrier-neutral-017：admit()/OperatorPeer + `connection/request` waterfall + mount-preserving BrowserAuth + 0.1.7 client | ✅ active（npm diff 审计：插件契约面与 rc.2 逐字节一致 + 真实 rc.1 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.5；真实部署仍需按清单确认） |
+| `0.1.7-rc.2` + `0.1.7-rc.2` | `carrier-neutral-v3` | 同上 | ✅ active（真实 npm fixture 组合测试 + 2026-09-26 实机 checklist 与回滚演练，见 docs/DESIGN.md） |
 | 其它版本或混合版本对 | — | 😴 自动休眠：官方行为分毫不变 | dormant |
 
 白名单匹配的是**完整版本对**，不是两个独立的 `includes()`：
@@ -77,6 +78,9 @@ runtime=0.1.2-rc.1 + connection=0.1.5-rc.1 → dormant
 runtime=0.1.5-rc.1 + connection=0.1.5-rc.1 → carrier-neutral-v2
 runtime=0.1.5-rc.1 + connection=0.1.5-rc.2 → dormant（同代际跨 patch 混合同样是事故形态）
 runtime=0.1.5-rc.2 + connection=0.1.5-rc.2 → carrier-neutral-v2
+runtime=0.1.7-rc.1 + connection=0.1.7-rc.1 → carrier-neutral-v3
+runtime=0.1.7-rc.1 + connection=0.1.7-rc.2 → dormant（同代际跨 patch 混合同样是事故形态）
+runtime=0.1.7-rc.2 + connection=0.1.7-rc.1 → dormant
 runtime=0.1.7-rc.2 + connection=0.1.7-rc.2 → carrier-neutral-v3
 runtime=0.1.7-rc.2 + connection=0.1.5-rc.2 → dormant（跨代际混合）
 ```
@@ -117,11 +121,11 @@ git diff --exit-code cordis.patch.yml
 
 测试矩阵覆盖：
 
-- 三个完整 profile pair、混合版本、未知版本和 manifest/path drift
+- 全部 active profile pair、同代际跨 patch 混合、跨代际混合、未知版本和 manifest/path drift
 - pnpm 路径段与 npm flat manifest fallback
 - legacy buffered bridge 与 carrier-neutral streaming bridge
 - 真实 0.1.5 dedicated `connection.rpc.handle()`、exact Fetch route 和 405 回归
-- 真实 0.1.7 `admit()`/OperatorPeer、`connection/request` waterfall、mount-preserving token 清理与跨代际混合 dormant
+- 真实 0.1.7 `admit()`/OperatorPeer、`connection/request` waterfall、mount-preserving token 清理、同代际跨 patch 混合 dormant（rc.1 ↔ rc.2）与跨代际混合 dormant
 - 三个官方 client factory 的 materialization、profile dispatcher 和未知 profile fail-closed
 - rc.2 dormant 基线、dispose/unload、Host/Origin/Fetch Metadata trust fence
 

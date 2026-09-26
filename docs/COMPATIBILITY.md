@@ -125,12 +125,13 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 ## 4. Client variant seam
 
-`scripts/build-client-variants.mjs` 从两个 exact dev source 生成 dispatcher：
+`scripts/build-client-variants.mjs` 从各 exact dev source 生成 dispatcher：
 
 | Profile | Source | Dispatcher 选择 |
 | --- | --- | --- |
 | `legacy-web-v1` | `@deepseek-ai/dsh-client-connection@0.1.2-rc.1/client` | profile global = `legacy-web-v1` |
 | `carrier-neutral-v2` | `@deepseek-ai/dsh-client-connection@0.1.5-rc.1/client` | profile global = `carrier-neutral-v2` |
+| `carrier-neutral-v3` | `@deepseek-ai/dsh-client-connection@0.1.7-rc.2/client` | profile global = `carrier-neutral-v3`（服务 v3 全部 pair，见 §5.5） |
 
 构建和测试要求：
 
@@ -222,6 +223,31 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 第 4 条（布局/resolver/drift 测试）由全量 `npm run test:all`（新增 `test:rc17-fixture`）覆盖。第 5–6 条（真实部署 active checklist + 回滚演练）已于 2026-09-26 在本机 `0.1.7-rc.2` 宿主完成，记录见 `docs/DESIGN.md` 实机验证一节。
 
+### 5.5 审计记录：`0.1.7-rc.1` 加入 `carrier-neutral-v3`（2026-09-26）
+
+结论：**rc.1 通过 §5.1 全部条件，作为新 pair 加入既有代际**，未新增 adapter/client variant。
+
+审计方法：从 npm 拉取锚点包的 `0.1.7-rc.1` 与 `0.1.7-rc.2` tarball 做 `diff -r` 逐字节对比。除 §5.3/§5.4 的四个锚点包外，本轮额外覆盖 `dsh-scope`（`admit()`/OperatorPeer 的实现来源）、`dsh-host-frontend-static` 与 boot 层 `dsh-app-boot`：
+
+| 包 | rc.1 → rc.2 代码差异 |
+| --- | --- |
+| `@deepseek-ai/dsh-client-connection`（被替换对象 + client variant 源） | 无（仅 package.json 版本/依赖区间 bump；`lib/`、`client/` 逐字节一致） |
+| `@deepseek-ai/dsh-host-webserver`（DI/web carrier 契约） | 无（仅 package.json bump） |
+| `@deepseek-ai/dsh-scope`（`admit()`/OperatorPeer 来源） | 无（仅 package.json bump） |
+| `@deepseek-ai/dsh-host-frontend-static` | 无（仅 package.json bump） |
+| `@deepseek-ai/dsh-web-app`（浏览器壳 + 官方 patch） | `cordis.patch.yml` 仅**新增行**（`time-context`/`schedule`/`shortcuts`/`ui-shortcuts`）与 schedule 注释改写；`connection` 行（`id/name/inject/config`）逐字段一致；package.json 为依赖 bump 与新增包（schedule、time-context、shortcuts 等） |
+| `@deepseek-ai/dsh`（runtime 本体，探针第一锚点） | 有 diff 但语义无关：`bin.js`/`profile-boot.js` 仅 chunk 哈希重命名的 import 引用；重命名 chunk 逐一配对对比——**plugin chunk（ModuleLoader，gate 依赖的 loader seam 所在）逐字节一致**，profile-boot chunk 新增 `reportSkippedBundles` 调用（纯诊断，见下行），dump-config chunk 为 CLI 内部签名调整 |
+| `@deepseek-ai/dsh-app-boot`（boot 层，profile patch 读取） | 有 diff 但语义无关：skipped-bundle 从「边加载边打印」重构为「收集进 `profile.skippedBundles`、由 launcher 一次性打印」（加载与 patch 应用语义不变）；`OPTIONAL_BUNDLES` 追加 experimental 包；resolver 错误消息格式化。`readProfilePatches`/`loadOverlayPatches` 契约不变 |
+
+即 `0.1.7-rc.2` 相对 rc.1 是「插件契约面上的等价重发布 + 无关诊断演进」：§5.1 第 1–3 条（host 入口/构造器/`admit()`/`createSharedFetchHandler`/route/body 契约、adapter 无分支、client bundle 契约）由逐字节一致与 connection 行逐字段一致直接满足；rc17 client variant 以 profile id 单一来源同时服务两个 pair。第 4–5 条由本轮新增测试满足：
+
+- gate 探针/profile 解析：rc.1 精确对正例；`0.1.7-rc.1 runtime + 0.1.7-rc.2 connection` 及反向**同代际跨 patch 混合负例**（必须 dormant）；`0.1.5-rc.2 ↔ 0.1.7-rc.1` 跨代际混合负例。
+- 真实 npm fixture：`install-rc17-fixture.mjs` 追加 `*-rc171` 别名（真实 `0.1.7-rc.1` 包），`tests/composition/active-rc171.test.mjs` 用真实 rc.1 包复刻 full active checklist（行状态、index profile marker + recovery global、mount-preserving 303 `./`、dedicated RPC 200 + OperatorPeer 第 4 参、waterfall 对 sibling 可见且 403 不进瀑布、streaming Fetch route），并断言同代际跨 patch 双向 dormant 与跨代际 dormant。
+- `tests/composition/npm-flat-rc17.test.mjs` 追加 rc.1 manifest 回退激活用例（dshm npm 扁平形态）。
+- `tests/manifest.test.mjs`：rc171 保持 fixture-only 别名——不进 dependencies，也不进 devDependencies（client variant 构建锚点保持 rc17 单一来源，避免出现第二个 0.1.7 构建输入）。
+
+第 6 条（真实 DSH `0.1.7-rc.1` 宿主 active checklist）待宿主运行 rc.1 时按 DESIGN 清单执行；本机宿主为 `0.1.7-rc.2`，其 checklist 已完成（§5.4）。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -234,6 +260,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 0.1.5 exact `/api` streaming Fetch route
 - 0.1.5 recovery/profile index globals
 - 0.1.7-rc.2 真实 npm package carrier-neutral-v3 composition（§5.4：admit/OperatorPeer、waterfall、303 `./`、dedicated RPC 非 405、双向跨代际混合 dormant、npm flat 布局）
+- 0.1.7-rc.1 真实 npm package carrier-neutral-v3 composition（§5.5：full active checklist、同代际跨 patch 混合双向 dormant、跨代际 dormant、npm flat 布局）
 - rc2 dormant 基线
 - 三个官方 client factory materialization 和 unknown profile fail-closed
 - `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。
@@ -243,5 +270,6 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 - 在真实运行 DSH `0.1.5-rc.1` 服务上的 active 部署结果。该验证应按 `docs/DESIGN.md` active checklist 执行并记录。
 - 在真实运行 DSH `0.1.5-rc.2` 服务上的 active 部署结果（升级宿主后按同一清单执行）。
+- 在真实运行 DSH `0.1.7-rc.1` 服务上的 active 部署结果（宿主运行 rc.1 时按同一清单执行）。
 
 已知无关问题（非本插件职责，记录备查）：同宿主上第三方插件对 0.1.7 的不适配——`dsh-auth` 的 `/auth/login` 在 edge 请求下因 `ctx.settings.get()`（其源码自注的 rc.1 shim）对 0.1.7 settings API 抛 TypeError；`modsearch` 报 `scope.settings.register is not a function`（同一 settings API 变化）；`copilot-authorization` 与官方 `dsh-authorization` 服务重名冲突。定性依据：dsh-auth 代码不依赖 connection 服务（登录页渲染路径无 connection 消费）；该 TypeError 首次出现于 2026-09-26 宿主升级 0.1.7 之后，与本插件激活无关（升级后至插件激活前 `/auth/login` 零访问，TypeError 首次触发于插件激活 51 秒后的 edge 请求，与同 boot 的 modsearch/settings 报错同源）。未做卸载态下的 edge 复现差分。
