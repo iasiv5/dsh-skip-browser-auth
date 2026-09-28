@@ -51,3 +51,21 @@ test('gate anchors never collide with declared runtime dependencies', () => {
     assert.equal(anchor in dependencies, false, `gate anchor ${anchor} must never be a runtime dependency`)
   }
 })
+
+test('pinned connection copy loads lazily (no static @deepseek-ai import reaches lib)', () => {
+  // 审计修复 2026-09-28：lib/connection-runtime.js 曾在顶层静态 import pinned
+  // 0.1.2 副本——产品环境随插件加载即求值旧模块图，且绑定随安装布局漂移
+  // （dev 树内嵌遮蔽命中 pinned，净装经 hoist 命中宿主）。不变量：静态 import
+  // 不得出现在 lib 产物；无 loader 回退分支只能经动态 import() 在调用点解析。
+  const source = readFileSync(new URL('../lib/connection-runtime.js', import.meta.url), 'utf8')
+  assert.equal(
+    /from\s*['"]@deepseek-ai\/dsh-client-connection['"]/.test(source),
+    false,
+    'lib/connection-runtime.js must not statically import the pinned dev copy',
+  )
+  assert.equal(
+    /import\(\s*['"]@deepseek-ai\/dsh-client-connection['"]\s*\)/.test(source),
+    true,
+    'no-loader fallback must reach the pinned copy via dynamic import() only',
+  )
+})

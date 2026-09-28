@@ -1,7 +1,6 @@
 /** Runtime connection module loader used by compatibility adapters. */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { API_PATH as PINNED_API_PATH, HostConnectionService as PinnedHostConnectionService } from '@deepseek-ai/dsh-client-connection'
 import { CONNECTION_PACKAGE } from './gate.js'
 import type { FetchHandler } from './bridge.js'
 
@@ -87,8 +86,24 @@ export async function loadRuntimeConnectionModule(ctx: Context): Promise<Runtime
     }
     return loaded
   }
-  return {
-    HostConnectionService: PinnedHostConnectionService as unknown as RuntimeConnectionModule['HostConnectionService'],
-    API_PATH: PINNED_API_PATH,
+  return importPinnedConnectionModule()
+}
+
+/**
+ * Pinned dev 副本惰性加载（审计修复 2026-09-28）：只允许在完全没有 loader
+ * 服务的直接单元测试上下文执行。禁止顶层静态 import——那会让 0.1.2 旧模块
+ * 图在产品环境随插件加载被求值，且 bare specifier 绑定随安装布局漂移（dev
+ * 树内嵌时遮蔽命中 pinned 副本，净装则经 pnpm hoist 命中宿主副本）。动态
+ * import() 把模块解析推迟到实际调用点，产品路径（loader 恒在）永不触碰该
+ * 副本。不变量由 tests/manifest.test.mjs 的 lazy-load 断言锁定。
+ */
+async function importPinnedConnectionModule(): Promise<RuntimeConnectionModule> {
+  const pinned = (await import('@deepseek-ai/dsh-client-connection')) as unknown as
+    | Partial<RuntimeConnectionModule>
+    | null
+    | undefined
+  if (typeof pinned?.HostConnectionService !== 'function' || typeof pinned?.API_PATH !== 'string') {
+    throw new Error(`@iasiv5/dsh-skip-browser-auth: pinned dev module ${CONNECTION_PACKAGE} has an incompatible export shape`)
   }
+  return pinned as RuntimeConnectionModule
 }
