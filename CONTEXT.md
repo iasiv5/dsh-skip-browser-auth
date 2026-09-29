@@ -18,7 +18,7 @@ _Avoid_: adapter（描述 Replacement 本身时）、hook、覆盖层、monkey p
 
 **compatibility profile（兼容性 profile）**:
 一个完整的 DSH runtime/connection 版本对与其实现契约的绑定：包含 profile id、精确版本对、host adapter、client variant、route/body 语义和 active/candidate 状态。profile 是版本兼容的单一事实源。
-当前 profile：`legacy-web-v1`（0.1.2-rc.1）、`carrier-neutral-v2`（0.1.5-rc.1、0.1.5-rc.2）与 `carrier-neutral-v3`（0.1.7-rc.1、0.1.7-rc.2、0.2.0-rc.1）。
+当前 profile：`legacy-web-v1`（0.1.2-rc.1）、`carrier-neutral-v2`（0.1.5-rc.1、0.1.5-rc.2）与 `carrier-neutral-v3`（0.1.7-rc.1、0.1.7-rc.2、0.2.0-rc.1、0.2.0-rc.2）。
 _Avoid_: 只写“白名单版本”而不说明代际契约
 
 **compatibility generation（兼容代际）**:
@@ -38,7 +38,7 @@ _Avoid_: 运行时猜测、自动适配、能力碰运气
 _Avoid_: capability probe（泛称）、结构探测、宽松版本检测
 
 **whitelist（版本白名单）**:
-允许激活的精确 profile/pair 集合：当前为 `0.1.2-rc.1 + 0.1.2-rc.1`、`0.1.5-rc.1 + 0.1.5-rc.1`、`0.1.5-rc.2 + 0.1.5-rc.2`、`0.1.7-rc.1 + 0.1.7-rc.1`、`0.1.7-rc.2 + 0.1.7-rc.2` 与 `0.2.0-rc.1 + 0.2.0-rc.1`。白名单匹配完整版本对，不使用 `>=`、范围、`latest` 或两个独立版本 `includes()`；runtime 与 connection 混合版本（含同代际跨 patch/跨 minor 混合与跨代际混合，如 rc.1 runtime + rc.2 connection、0.1.7 runtime + 0.2.0 connection）必须 dormant。
+允许激活的精确 profile/pair 集合：当前为 `0.1.2-rc.1 + 0.1.2-rc.1`、`0.1.5-rc.1 + 0.1.5-rc.1`、`0.1.5-rc.2 + 0.1.5-rc.2`、`0.1.7-rc.1 + 0.1.7-rc.1`、`0.1.7-rc.2 + 0.1.7-rc.2`、`0.2.0-rc.1 + 0.2.0-rc.1` 与 `0.2.0-rc.2 + 0.2.0-rc.2`。白名单匹配完整版本对，不使用 `>=`、范围、`latest` 或两个独立版本 `includes()`；runtime 与 connection 混合版本（含同代际跨 patch/跨 minor 混合与跨代际混合，如 rc.1 runtime + rc.2 connection、0.1.7 runtime + 0.2.0 connection）必须 dormant。
 _Avoid_: 最低版本、版本范围、通配符、单独的“0.1.x”判断
 
 **host adapter**:
@@ -46,7 +46,7 @@ _Avoid_: 最低版本、版本范围、通配符、单独的“0.1.x”判断
 _Avoid_: 让公共 `apply()` 直接假设所有 DSH 版本的 API 相同
 
 **client variant**:
-与 host adapter 成对的官方浏览器 client factory。0.1.2 使用 rc12 variant，0.1.5 使用 rc15 variant，0.1.7 使用 rc17 variant（0.2.0-rc.1 与 0.1.7 契约逐字节一致，共用 rc17）；由 host 注入的显式 profile id 选择，profile 缺失或未知时不猜测。
+与 host adapter 成对的官方浏览器 client factory。0.1.2 使用 rc12 variant，0.1.5 使用 rc15 variant，0.1.7 使用 rc17 variant（0.2.0-rc.1/rc.2 与 0.1.7 契约逐字节一致，共用 rc17）；由 host 注入的显式 profile id 选择，profile 缺失或未知时不猜测。
 _Avoid_: 把旧 client bundle re-ID 后冒充新版本、通过某个 global 是否存在来猜版本
 
 **mount-preserving（挂载保留语义）**:

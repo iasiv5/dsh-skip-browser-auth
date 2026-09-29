@@ -58,6 +58,19 @@ test('rc20 stays a fixture-only alias (never a runtime dep or build anchor)', ()
   }
 })
 
+test('rc202 stays a fixture-only alias (never a runtime dep or build anchor)', () => {
+  // rc202 只是组合测试 fixture 别名（真实 0.2.0-rc.2 包，--no-save 安装）；
+  // 0.2.0-rc.2 与 0.2.0-rc.1 在插件契约面逐字节一致（docs/COMPATIBILITY.md
+  // §5.7），client variant 仍由 rc17 别名单一来源构建，清单不得出现第二个
+  // 0.1.x/0.2.x 线构建锚点。
+  const dependencies = manifest.dependencies ?? {}
+  const devDependencies = manifest.devDependencies ?? {}
+  for (const alias of ['dsh-client-connection-rc202', 'frontend-static-rc202', 'webserver-rc202']) {
+    assert.equal(dependencies[alias], undefined)
+    assert.equal(devDependencies[alias], undefined)
+  }
+})
+
 test('gate anchors never collide with declared runtime dependencies', () => {
   const dependencies = manifest.dependencies ?? {}
   for (const anchor of [GATE_RUNTIME_PACKAGE, CONNECTION_PACKAGE]) {

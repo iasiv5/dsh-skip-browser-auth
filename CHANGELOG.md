@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-09-29
+
+- 新增 DSH `0.2.0-rc.2` 支持（npm diff 审计：插件契约面与 `0.2.0-rc.1` 逐字节一致的依赖对齐重发布 + 无关 Desktop 插件管理 CLI 演进，并入 `carrier-neutral-v3`，见 docs/COMPATIBILITY.md §5.7）
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`
+
 ## [0.3.4] - 2026-09-29
 
 - 新增 DSH `0.2.0-rc.1` 支持（npm diff 审计：插件契约面与 `0.1.7-rc.2` 逐字节一致的依赖对齐重发布，并入 `carrier-neutral-v3`，见 docs/COMPATIBILITY.md §5.6）

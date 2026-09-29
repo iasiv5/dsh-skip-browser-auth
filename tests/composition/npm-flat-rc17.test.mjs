@@ -14,6 +14,9 @@ const WebServer171 = await import('webserver-rc171')
 const Connection20 = await import('dsh-client-connection-rc20')
 const Frontend20 = await import('frontend-static-rc20')
 const WebServer20 = await import('webserver-rc20')
+const Connection202 = await import('dsh-client-connection-rc202')
+const Frontend202 = await import('frontend-static-rc202')
+const WebServer202 = await import('webserver-rc202')
 
 const ROWS = [
   { name: '@deepseek-ai/dsh-host-webserver', config: { host: '127.0.0.1', port: 0 } },
@@ -70,6 +73,26 @@ test('0.2.0-rc.1 npm flat manifest fallback activates carrier-neutral-v3', async
       '@deepseek-ai/dsh-client-connection': Connection20,
       '@deepseek-ai/dsh-host-frontend-static': Frontend20,
       '@deepseek-ai/dsh-host-webserver': WebServer20,
+    },
+    rows: ROWS,
+  })
+  const entries = [...context.loader.entries()]
+  assert.equal(entries.find((entry) => entry.options.id === 'connection')?.disabled, true)
+  assert.equal(entries.find((entry) => entry.options.id === 'trusted-connection')?.disabled, false)
+  const rootGet = await rawRequest(port, { path: '/' })
+  assert.equal(rootGet.status, 200)
+  assert.match(rootGet.body, /carrier-neutral-v3/)
+})
+
+test('0.2.0-rc.2 npm flat manifest fallback activates carrier-neutral-v3', async (t) => {
+  const { context, port } = await compose(t, {
+    layout: 'npm',
+    probeVersion: '0.2.0-rc.2',
+    webRuntime: { lanAddresses: [], trustedHosts: [] },
+    modules: {
+      '@deepseek-ai/dsh-client-connection': Connection202,
+      '@deepseek-ai/dsh-host-frontend-static': Frontend202,
+      '@deepseek-ai/dsh-host-webserver': WebServer202,
     },
     rows: ROWS,
   })

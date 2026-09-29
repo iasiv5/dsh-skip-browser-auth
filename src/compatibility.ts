@@ -77,11 +77,21 @@ export const COMPATIBILITY_PROFILES = [
     // (dsh-app-boot OPTIONAL_BUNDLES, web-app patch telemetry/schedule rows)
     // never intersect the connection contract. No second 0.1.x-line build input
     // is introduced: the rc17 client variant keeps anchoring at 0.1.7-rc.2.
+    //
+    // 0.2.0-rc.2 joined for the same reason (§5.7): another dependency-alignment
+    // republish on the contract face — lib/+client/ byte-identical in all anchor
+    // packages (web-app's whole diff is package.json, so cordis.patch.yml and its
+    // connection row are byte-identical too) — plus unrelated Desktop-only
+    // plugin-management CLI changes in the runtime (bin.js, lib/types/*.d.ts) and
+    // a ModuleLoader chunk-hash rename whose 34 changed lines all sit in that CLI
+    // area with resolveSync usage line-identical. rc17 keeps anchoring at
+    // 0.1.7-rc.2; no second 0.2.x-line build input is introduced.
     id: 'carrier-neutral-v3',
     pairs: [
       { runtime: '0.1.7-rc.1', connection: '0.1.7-rc.1' },
       { runtime: '0.1.7-rc.2', connection: '0.1.7-rc.2' },
       { runtime: '0.2.0-rc.1', connection: '0.2.0-rc.1' },
+      { runtime: '0.2.0-rc.2', connection: '0.2.0-rc.2' },
     ],
     hostAdapter: 'carrier-neutral-017',
     clientVariant: 'rc17',
