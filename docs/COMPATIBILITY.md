@@ -143,6 +143,14 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 ## 5. 新版本进入流程
 
+> 自动化辅助（2026-09-29 起）：`npm run audit-candidate -- <candidate-version>`
+> （`scripts/audit-candidate.mjs`）以白名单最新 pair 为基准，拉取 8 个锚点包的
+> 两版 tarball 逐字节对比并判级 `RE-PUBLISH` / `REPUBLISH-WITH-REVIEW` /
+> `CONTRACT-CHANGED`（含 web-app connection 行截取对比与 runtime chunk 重命名的
+> loader seam 抽查）。它只覆盖 §5.1 第 1–3 条的机器可判部分，并打印建议 pair
+> 片段；第 4–6 条（gate/混合负例、真实 fixture 组合测试、实机 active checklist）
+> 仍必须人工完成。判级依据与本节各审计记录的人工判据一致。
+
 ### 5.1 加入已有 profile
 
 只有以下条件全部满足，才可把新版本对追加到既有 `pairs`：

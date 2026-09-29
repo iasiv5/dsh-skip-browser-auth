@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+- 新增 `scripts/audit-candidate.mjs`（`npm run audit-candidate -- <version>`）：以白名单最新 pair 为基准自动完成 docs/COMPATIBILITY.md §5.1 第 1–3 条的锚点包 tarball 审计，判级 `RE-PUBLISH` / `REPUBLISH-WITH-REVIEW` / `CONTRACT-CHANGED`（含 connection 行对比与 loader seam 抽查）；离线纯函数单测见 tests/audit-candidate.test.mjs
+
 ## [0.3.5] - 2026-09-29
 
 - 新增 DSH `0.2.0-rc.2` 支持（npm diff 审计：插件契约面与 `0.2.0-rc.1` 逐字节一致的依赖对齐重发布 + 无关 Desktop 插件管理 CLI 演进，并入 `carrier-neutral-v3`，见 docs/COMPATIBILITY.md §5.7）

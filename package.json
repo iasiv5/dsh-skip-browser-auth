@@ -43,6 +43,7 @@
     "test:rc15-fixture": "node scripts/install-rc15-fixture.mjs",
     "test:rc17-fixture": "node scripts/install-rc17-fixture.mjs",
     "test:all": "npm run test:rc2-fixture && npm run test:rc15-fixture && npm run test:rc17-fixture && npm run build && npm run typecheck && npm test",
+    "audit-candidate": "node scripts/audit-candidate.mjs",
     "prepare": "npm run build"
   },
   "dsh": {
