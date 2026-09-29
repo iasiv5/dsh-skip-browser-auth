@@ -69,10 +69,19 @@ export const COMPATIBILITY_PROFILES = [
     // code, the web-app patch's connection row is field-identical, and the runtime
     // diff is chunk-hash renames plus diagnostics-only boot changes. The rc17
     // client variant therefore serves both pairs, selected by this one profile id.
+    //
+    // 0.2.0-rc.1 joined for the same reason (§5.6): despite the minor bump it is
+    // a dependency-alignment republish on every surface the replacement probes
+    // or serves — lib/+client/ byte-identical in all anchor packages, the
+    // official patch's connection row field-identical, and the only code diffs
+    // (dsh-app-boot OPTIONAL_BUNDLES, web-app patch telemetry/schedule rows)
+    // never intersect the connection contract. No second 0.1.x-line build input
+    // is introduced: the rc17 client variant keeps anchoring at 0.1.7-rc.2.
     id: 'carrier-neutral-v3',
     pairs: [
       { runtime: '0.1.7-rc.1', connection: '0.1.7-rc.1' },
       { runtime: '0.1.7-rc.2', connection: '0.1.7-rc.2' },
+      { runtime: '0.2.0-rc.1', connection: '0.2.0-rc.1' },
     ],
     hostAdapter: 'carrier-neutral-017',
     clientVariant: 'rc17',

@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-09-29
+
+- 新增 DSH `0.2.0-rc.1` 支持（npm diff 审计：插件契约面与 `0.1.7-rc.2` 逐字节一致的依赖对齐重发布，并入 `carrier-neutral-v3`，见 docs/COMPATIBILITY.md §5.6）
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`
+
+## [0.3.3] - 2026-09-28
+
+- 纯版本号 bump（仅 package.json version，无代码变更）
+
 ## [0.3.2] - 2026-09-28
 
 - 修复：connection-runtime 固定开发副本改为按需动态加载，避免部分环境下加载报错
@@ -55,7 +64,9 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.3...v0.3.4
+[0.3.3]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.2.2...v0.3.1
 [0.2.2]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.2.1...v0.2.2

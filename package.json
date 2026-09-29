@@ -1,7 +1,7 @@
 {
   "name": "@iasiv5/dsh-skip-browser-auth",
-  "version": "0.3.3",
-  "description": "替换官方 Connection 提供方跳过 BrowserAuth，免输 Token；已适配 0.1.2-rc.1、0.1.5-rc.1/rc.2 与 0.1.7-rc.1/rc.2，详见仓库。",
+  "version": "0.3.4",
+  "description": "替换官方 Connection 提供方跳过 BrowserAuth，免输 Token；已适配 0.1.2-rc.1、0.1.5-rc.1/rc.2、0.1.7-rc.1/rc.2 与 0.2.0-rc.1，详见仓库。",
   "keywords": [
     "dsh",
     "deepseek-harness",

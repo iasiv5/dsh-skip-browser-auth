@@ -45,6 +45,17 @@ execFileSync('npm', [
   'dsh-client-connection-rc171@npm:@deepseek-ai/dsh-client-connection@0.1.7-rc.1',
   'frontend-static-rc171@npm:@deepseek-ai/dsh-host-frontend-static@0.1.7-rc.1',
   'webserver-rc171@npm:@deepseek-ai/dsh-host-webserver@0.1.7-rc.1',
+  // 0.2.0-rc.1 joined the 0.1.7 generation (docs/COMPATIBILITY.md §5.6): real
+  // packages under *-rc20 aliases exercise the third v3 pair and the
+  // cross-minor mixed-pair dormant negatives. Peer chain is identical to rc17
+  // (connection → peer dsh-scope → peer dsh-invariants, plus cordis ~4.0.4
+  // satisfied by the root pin); rc20 alias peer requests resolve to 0.2.0-rc.1
+  // but all three packages are byte-identical to their 0.1.7-rc.2 counterparts
+  // (§5.6), so sharing the scope/invariants installs below has no behavior
+  // difference.
+  'dsh-client-connection-rc20@npm:@deepseek-ai/dsh-client-connection@0.2.0-rc.1',
+  'frontend-static-rc20@npm:@deepseek-ai/dsh-host-frontend-static@0.2.0-rc.1',
+  'webserver-rc20@npm:@deepseek-ai/dsh-host-webserver@0.2.0-rc.1',
   // 0.1.7 connection 的 peer 链（repo .npmrc legacy-peer-deps=true 后 npm 不再
   // 自动安装 peer，必须显式列出）：connection → peer dsh-scope → peer
   // dsh-invariants。取 rc.2 锚点版本；rc171 别名 peer 请求 0.1.7-rc.1，
