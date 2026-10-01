@@ -7,7 +7,7 @@
 - 保留 fail-closed：未知版本、混合版本对、未实现 profile、解析异常和 profile 配置不一致都不能激活 Replacement。
 - 为未来第三、第四代兼容性预留稳定 seam：同一契约的新版本只需加入已有 profile 的版本对；出现 API/运行时契约变化时新增 profile、host adapter 和 client variant，不修改旧 profile 的行为。
 - 只有在 0.1.5 的 host、RPC route、request body、client bundle 和真实组合验证完成后，才把 `0.1.5-rc.1` 从 candidate 标记为 active；不能把“版本被探针识别”写成“真实兼容已验证”。
-- 同步升级 README、`CONTEXT.md`、`docs/DESIGN.md`，并新增兼容性审计说明，记录 0.1.2/0.1.5 的 API 差异、profile 选择规则、未来新增代际的流程和当前验证边界。
+- 同步升级 README、`GLOSSARY.md`、`docs/DESIGN.md`，并新增兼容性审计说明，记录 0.1.2/0.1.5 的 API 差异、profile 选择规则、未来新增代际的流程和当前验证边界。
 
 ## GitHub 兼容性审计结论
 
@@ -102,7 +102,7 @@ const COMPATIBILITY_PROFILES = [
 ## 输入工件
 
 - GitHub 兼容性证据：[v0.1.5 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.5-rc.1)、[compare](https://github.com/deepseek-ai/deepseek-harness/compare/dsh-v0.1.2-rc.1...dsh-v0.1.5-rc.1)、[#6105](https://github.com/deepseek-ai/deepseek-harness/discussions/6105)、[#6111](https://github.com/deepseek-ai/deepseek-harness/discussions/6111)。
-- 当前术语与插件边界：`CONTEXT.md`。
+- 当前术语与插件边界：`GLOSSARY.md`。
 - 当前 gate/host/build：`src/gate.ts`、`src/index.ts`、`src/bridge.ts`、`scripts/build.mjs`、`scripts/write-patch.mjs`、`cordis.patch.yml`。
 - 当前测试矩阵：`tests/gate.test.mjs`、`tests/host-apply.test.mjs`、`tests/patch.test.mjs`、`tests/composition/`、`tests/client-materialize.test.mjs`。
 - 历史实现计划 `docs/plans/2026-09-04-dsh-skip-browser-auth-implementation-plan.md` 保留为历史记录，不在本次重写。
@@ -126,7 +126,7 @@ const COMPATIBILITY_PROFILES = [
 - Modify/Create: `tests/adapters/*.test.mjs`、`tests/composition/*.test.mjs`、`tests/helpers/compose.mjs`、`tests/fixtures/rpc-probe.mjs` —真实 0.1.2/0.1.5 module 组合和 `rpc.handle` 405 回归。
 - Modify: `tests/artifacts.test.mjs`、`tests/client-materialize.test.mjs` —两个 client variant 和 dispatcher。
 - Create: `docs/COMPATIBILITY.md` — GitHub 审计结论、profile matrix、API 差异、升级/新增代际流程、验证状态。
-- Modify: `README.md`、`CONTEXT.md`、`docs/DESIGN.md` —用户说明、术语、详版机制和运维清单。
+- Modify: `README.md`、`GLOSSARY.md`、`docs/DESIGN.md` —用户说明、术语、详版机制和运维清单。
 - Verify: `lib/` 继续忽略；发布包不包含 `src/`、`tests/`、`docs/` 和 fixture alias。
 
 ## 任务清单
@@ -215,7 +215,7 @@ const COMPATIBILITY_PROFILES = [
 ### Task 5: 升级 package metadata、README、兼容性与设计文档
 
 - 目标：文档从“单一版本白名单”升级为“兼容代际 profile”，并如实记录 GitHub API 差异与验证状态。
-- 涉及文件：`package.json`、`README.md`、`CONTEXT.md`、`docs/DESIGN.md`、`docs/COMPATIBILITY.md`。
+- 涉及文件：`package.json`、`README.md`、`GLOSSARY.md`、`docs/DESIGN.md`、`docs/COMPATIBILITY.md`。
 - 接口契约
   - Consumes: Task 1–4 的 profile 表、adapter/client 行为、GitHub 证据与测试结果。
   - Produces: 用户可读版本矩阵、技术设计、术语定义、未来新增代际操作步骤；明确 0.1.5 不再共用 0.1.2 adapter/client。
@@ -223,9 +223,9 @@ const COMPATIBILITY_PROFILES = [
 
 - [x] Step 1: 更新 `docs/COMPATIBILITY.md`：记录 GitHub release/source/discussion 链接、0.1.2 vs 0.1.5 差异表、profile 数据模型、版本 pair 匹配、host/client adapter seam、测试矩阵、未来新增 profile 的 checklist。
 - [x] Step 2: 更新 `README.md`：安装说明、兼容矩阵、profile 选择、0.1.5 `connection.rpc.handle` 405 风险与插件 adapter 处理、固定安全 warning、active 验证命令、未知/未验证版本 dormant 规则。
-- [x] Step 3: 更新 `CONTEXT.md` 与 `docs/DESIGN.md`：把 whitelist 术语改为“精确 profile/pair 集合”，记录同一代内部可扩展、跨代必须新 adapter/client、profile mismatch fail loud；更新 active checklist 标题以覆盖两个 profile。
+- [x] Step 3: 更新 `GLOSSARY.md` 与 `docs/DESIGN.md`：把 whitelist 术语改为“精确 profile/pair 集合”，记录同一代内部可扩展、跨代必须新 adapter/client、profile mismatch fail loud；更新 active checklist 标题以覆盖两个 profile。
 - [x] Step 4: 更新 `package.json.description`，不修改插件自身 version；确认 `package-lock.json` 仅包含明确 dev alias 变更，不含 runtime `@deepseek-ai` dependency。
-- Run: `node --input-type=module -e "import fs from 'node:fs'; for (const f of ['README.md','CONTEXT.md','docs/DESIGN.md','docs/COMPATIBILITY.md','package.json']) { const s=fs.readFileSync(f,'utf8'); for (const x of ['0.1.2-rc.1','0.1.5-rc.1','compatibility','profile']) if (!s.toLowerCase().includes(x.toLowerCase())) throw new Error(f+' missing '+x); }" && git diff --check`
+- Run: `node --input-type=module -e "import fs from 'node:fs'; for (const f of ['README.md','GLOSSARY.md','docs/DESIGN.md','docs/COMPATIBILITY.md','package.json']) { const s=fs.readFileSync(f,'utf8'); for (const x of ['0.1.2-rc.1','0.1.5-rc.1','compatibility','profile']) if (!s.toLowerCase().includes(x.toLowerCase())) throw new Error(f+' missing '+x); }" && git diff --check`
 - Expected: 文档均提及两个版本和 profile 机制；没有“两个版本共用一个 adapter/client”的错误表述；空白检查通过。
 
 ## 任务间接口契约

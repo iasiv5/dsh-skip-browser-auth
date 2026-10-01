@@ -7,7 +7,7 @@
 - 将 DSH Skip Browser Auth 的精确激活白名单从单一 `0.1.2-rc.1` 扩展为 `0.1.2-rc.1` 与 `0.1.5-rc.1` 两个版本。
 - 保留双锚点（`@deepseek-ai/dsh` runtime 本体 + `@deepseek-ai/dsh-client-connection`）和 fail-closed 语义：两个锚点必须解析到同一个白名单版本；混用两个白名单版本、解析失败或版本不在白名单时不得激活 Replacement。
 - 让组合期探针、`apply()` backstop、生成的 `cordis.patch.yml`、单元/组合测试和发布元数据使用同一份版本列表，避免“探针允许但 backstop 拒绝”或文档落后。
-- 升级 README、`CONTEXT.md` 与 `docs/DESIGN.md`，补充两个白名单版本、混合版本行为、安装后判断方式、两版本 active 验证清单和当前验证边界；保留既有历史实施计划不改写。
+- 升级 README、`GLOSSARY.md` 与 `docs/DESIGN.md`，补充两个白名单版本、混合版本行为、安装后判断方式、两版本 active 验证清单和当前验证边界；保留既有历史实施计划不改写。
 - 不升级插件自身发布版本号、不发布 npm、不修改 DSH 本体、systemd、反向代理或任何仓库外服务。
 
 ## 架构快照
@@ -29,7 +29,7 @@
 ## 输入工件
 
 - 用户需求：额外将 DSH `0.1.5-rc.1` 加入现有 `0.1.2-rc.1` 白名单，并同步升级 README 与仓库说明文档。
-- 术语与边界：`CONTEXT.md`。
+- 术语与边界：`GLOSSARY.md`。
 - 当前机制说明与验证协议：`README.md`、`docs/DESIGN.md`、`cordis.patch.yml`、`src/gate.ts`、`src/index.ts`。
 - 既有实现历史：`docs/plans/2026-09-04-dsh-skip-browser-auth-implementation-plan.md`；该文件保留为历史计划，不在本次改动中重写。
 
@@ -44,7 +44,7 @@
 - Modify: `tests/host-apply.test.mjs` — 覆盖 `0.1.5-rc.1` 的 backstop 放行、manifest 漂移、混合锚点 fail loud 与完整白名单诊断。
 - Modify: `tests/patch.test.mjs`、`tests/composition/active.test.mjs`、`tests/composition/npm-flat.test.mjs`、`tests/composition/gate-binding.test.mjs` — 覆盖生成 patch、pnpm/npm 两种布局、第二白名单版本 active 和混合版本 dormant/fail loud。
 - Modify: `README.md` — 更新用户安装说明、版本矩阵、agent 提示词、安全说明和两版本 active 验证清单。
-- Modify: `CONTEXT.md` — 更新 whitelist 术语及双锚点同版本约束。
+- Modify: `GLOSSARY.md` — 更新 whitelist 术语及双锚点同版本约束。
 - Modify: `docs/DESIGN.md` — 更新详版兼容表、探针机制、行为矩阵、升级策略、限制和实机验证清单。
 - Test/verify: `package-lock.json` 不应发生变更；`lib/` 仍为构建忽略产物。
 - Create: 本计划文件 `docs/plans/2026-09-10-multi-version-whitelist-implementation-plan.md`。
@@ -140,21 +140,21 @@
 ### Task 5: 更新术语、详版设计与维护说明
 
 - 目标：让仓库内的技术说明与实现一致，并补充双版本/混合版本的行为与运维验证边界。
-- 涉及文件：`CONTEXT.md`、`docs/DESIGN.md`。
+- 涉及文件：`GLOSSARY.md`、`docs/DESIGN.md`。
 - 接口契约
   - Consumes: Task 1–4 的版本集合、探针/backstop 语义、组合测试结果和 README 的用户向表述。
   - Produces: `whitelist` 术语定义、兼容版本表、机制、行为矩阵、升级策略、限制和 active 验证清单均反映两个精确版本；历史 `docs/plans/2026-09-04-dsh-skip-browser-auth-implementation-plan.md` 不被改写。
 - 验证范围：文档没有把白名单写成范围/唯一单值，明确“同版本双锚点”和 fail-closed/fail-loud 边界，命令与仓库脚本一致。
 
 - [ ] Step 1: 写文档前检查：
-  - 读取 `CONTEXT.md` 的 whitelist 定义、`docs/DESIGN.md` 的兼容表/机制/版本策略/行为矩阵/限制/active 清单，标出所有“只有一个”“唯一 `0.1.2-rc.1`”和仅适用于 `0.1.2-rc.1` 的标题或说明；将历史实施计划列为不改写的历史输入。
-- Run: `node --input-type=module -e "import fs from 'node:fs'; for (const f of ['CONTEXT.md','docs/DESIGN.md']) { const s=fs.readFileSync(f,'utf8'); if (!s.includes('0.1.2-rc.1')) throw new Error(f+' missing existing whitelist'); if (!s.includes('唯一') && f === 'CONTEXT.md') console.log(f+' has no current singleton marker'); }"`
-- Expected: 当前 `CONTEXT.md` 与 `docs/DESIGN.md` 至少有一个缺少 `0.1.5-rc.1`，或仍含只支持单版本的旧表述，形成待修正文档差异。
+  - 读取 `GLOSSARY.md` 的 whitelist 定义、`docs/DESIGN.md` 的兼容表/机制/版本策略/行为矩阵/限制/active 清单，标出所有“只有一个”“唯一 `0.1.2-rc.1`”和仅适用于 `0.1.2-rc.1` 的标题或说明；将历史实施计划列为不改写的历史输入。
+- Run: `node --input-type=module -e "import fs from 'node:fs'; for (const f of ['GLOSSARY.md','docs/DESIGN.md']) { const s=fs.readFileSync(f,'utf8'); if (!s.includes('0.1.2-rc.1')) throw new Error(f+' missing existing whitelist'); if (!s.includes('唯一') && f === 'GLOSSARY.md') console.log(f+' has no current singleton marker'); }"`
+- Expected: 当前 `GLOSSARY.md` 与 `docs/DESIGN.md` 至少有一个缺少 `0.1.5-rc.1`，或仍含只支持单版本的旧表述，形成待修正文档差异。
 - [ ] Step 2: 更新技术说明：
-  - `CONTEXT.md` 将 whitelist 定义改为两个精确字符串集合，补充“双锚点必须命中同一集合成员；混合版本不激活”的术语约束，同时保留“不可安全跟随时做版本分叉”的原则。
+  - `GLOSSARY.md` 将 whitelist 定义改为两个精确字符串集合，补充“双锚点必须命中同一集合成员；混合版本不激活”的术语约束，同时保留“不可安全跟随时做版本分叉”的原则。
   - `docs/DESIGN.md` 增加/更新 `0.1.2-rc.1` 与 `0.1.5-rc.1` 两行兼容表，改写探针与 backstop 说明、版本升级策略、行为矩阵和已知限制；加入“各白名单版本单独验证，混合锚点 dormant/fail loud”的示例。
   - 将 active 实机清单改为“升级到 `0.1.2-rc.1` 或 `0.1.5-rc.1` 后”，用同一组命令验证；新增说明组合 fixture 证明的是门控与回归，不等于已经完成真实 `0.1.5-rc.1` 部署验证，避免过度宣称。
-- Run: `node --input-type=module -e "import fs from 'node:fs'; for (const f of ['CONTEXT.md','docs/DESIGN.md']) { const s=fs.readFileSync(f,'utf8'); for (const v of ['0.1.2-rc.1','0.1.5-rc.1']) if (!s.includes(v)) throw new Error(f+' missing '+v); } const d=fs.readFileSync('docs/DESIGN.md','utf8'); if (!/同一|混合/.test(d)) throw new Error('DESIGN.md lacks same-version/mixed-version rule');" && git diff --check`
+- Run: `node --input-type=module -e "import fs from 'node:fs'; for (const f of ['GLOSSARY.md','docs/DESIGN.md']) { const s=fs.readFileSync(f,'utf8'); for (const v of ['0.1.2-rc.1','0.1.5-rc.1']) if (!s.includes(v)) throw new Error(f+' missing '+v); } const d=fs.readFileSync('docs/DESIGN.md','utf8'); if (!/同一|混合/.test(d)) throw new Error('DESIGN.md lacks same-version/mixed-version rule');" && git diff --check`
 - Expected: 两份说明都含两个版本与同版本约束，`git diff --check` 通过；历史实施计划未被修改。
 
 ## 任务间接口契约
@@ -181,7 +181,7 @@
 2. `rm -rf lib && npm run build && node --input-type=module -e "await import('./lib/host.js')"`：clean-build smoke 通过。
 3. `git diff --exit-code cordis.patch.yml`：生成 patch 与仓库版本一致，重复 build 不产生差异。
 4. `npm pack --dry-run --json`：包清单含 `lib/host.js`、`lib/client.js`、`cordis.patch.yml`、`package.json`、`README.md`、`LICENSE`、`NOTICE`，不含 `src/` 与 `docs/` 私有/开发文件。
-5. `node --input-type=module -e "import fs from 'node:fs'; const files=['README.md','CONTEXT.md','docs/DESIGN.md','package.json']; for (const f of files) { const s=fs.readFileSync(f,'utf8'); for (const v of ['0.1.2-rc.1','0.1.5-rc.1']) if (!s.includes(v)) throw new Error(f+' missing '+v); }"`：公开元数据与当前说明均提及两个白名单版本。
+5. `node --input-type=module -e "import fs from 'node:fs'; const files=['README.md','GLOSSARY.md','docs/DESIGN.md','package.json']; for (const f of files) { const s=fs.readFileSync(f,'utf8'); for (const v of ['0.1.2-rc.1','0.1.5-rc.1']) if (!s.includes(v)) throw new Error(f+' missing '+v); }"`：公开元数据与当前说明均提及两个白名单版本。
 6. `git diff --check && git status --short`：无空白错误；只出现本计划列出的源码、测试、生成 patch、元数据和文档改动，`lib/` 不入 Git，`package-lock.json` 无意外变化。
 
 真实 DSH `0.1.5-rc.1` 主机的 active 实机验证不在本次仓库改动中伪造；交付文档必须保留可执行清单，待该版本部署后按清单记录实际状态码、warning 和回滚结果。

@@ -68,7 +68,7 @@
 
 ## 输入工件
 
-- 术语表：`/home/ubuntu/workspace/dsh-skip-browser-auth/CONTEXT.md`。
+- 术语表：`/home/ubuntu/workspace/dsh-skip-browser-auth/GLOSSARY.md`。
 - 设计共识：grilling 结论 Q1–Q11；评审二轮修订要求（BLOCKER-1…4、MAJOR-1…5、Task 11 四点）。
 - 移植参照：`RC1/packages/client/connection/src/`、`RC1/vendor/include/src/index.ts`（`!!js` 标签）、`RC1/vendor/loader/src/config/{tree,entry,group,utils}.ts`（`resolve`/`disabledOf`/`Entry.key = Symbol.for('cordis.entry')`/求值语义）。
 - npm 实测：`@deepseek-ai/dsh-client-connection@0.1.2-rc.1` 发布 `lib/client.js` 首行 `window.__ModuleLoader__.load({`、`\tid: "@deepseek-ai/dsh-client-connection",`、尾部 `exports.apply = apply; exports.inject = inject; … return module.exports;`；六个锚点串（wrapper 开头、注册 id、`dsh-client-connection`、`exports.apply = apply`、`exports.inject = inject`、`return module.exports`）各恰好出现 1 次。
