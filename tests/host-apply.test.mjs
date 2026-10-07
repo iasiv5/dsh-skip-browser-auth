@@ -277,3 +277,18 @@ test('backstop negative C2: desktop launcher argv — fail loud before any route
   }
   assert.equal(routes.length, 0)
 })
+
+test('backstop negative C3: desktop slot baseUrl — fail loud before any route', async (t) => {
+  // 0.3.9 镜像：desktop 槽位（进程树无关的构造性判别）⇒ backstop fail loud。
+  const { urls } = await writeGateFixtures(t, { runtimeVersion: '0.2.0-rc.2', connectionVersion: '0.2.0-rc.2' })
+  const { ctx, routes } = makeContext()
+  const { self } = fakeSelfWithRow()
+  ctx.baseUrl = 'file:///C:/Users/ies/.dsh/profiles/desktop/'
+  ctx.provide('loader', fakeLoader(urls))
+  ctx.fiber = { entry: self }
+  await assert.rejects(
+    apply(ctx, {}),
+    /desktop profile not supported.*disable or uninstall the plugin/,
+  )
+  assert.equal(routes.length, 0)
+})

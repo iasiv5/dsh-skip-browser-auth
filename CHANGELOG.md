@@ -4,6 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.3.9] - 2026-10-08
+
+- 修复：desktop 判别新增**安装槽位信号**（`ctx.baseUrl` 目录基名 === `desktop` ⇒ 休眠）——crash log（`crash-2026-10-07T17-11-31-064Z-host.log`）证实 desktop 宿主为多进程树（Electron main → dsh-desktop-host → 纯 node 子进程跑 loader），0.3.8 的 argv/execPath 信号瞄错进程层仍误判 web；槽位为官方 `desktopProfileDirFromArgv` 契约（desktop 客户端恒用 `profiles/desktop` 槽位），与进程树形状无关
+- web 侧行为零变化：web/headless 槽位 + node 宿主照常激活；兼容版本对不变
+- desktop 实机复核：见 docs/DESKTOP-DORMANT-CHECKLIST.md（0.3.9 需在 desktop 实机验证正常启动 + 无横幅 + 401×2 后方可视为闭环）
+
 ## [0.3.8] - 2026-10-08
 
 - 修复 desktop 门控缺陷：0.3.6 的 desktop 判别仅依赖「dsh-desktop-host 包可解析」，而 desktop profile 为 hoisted 物化布局、该包在 app.asar 内不可达 ⇒ 误判 web ⇒ Replacement 在 desktop 激活 ⇒ "Desktop Host authentication failed" 启动失败（desktop 用户请直接升级本版）
@@ -81,7 +87,8 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.8...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.9...HEAD
+[0.3.9]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.6...v0.3.8
 [0.3.6]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.4...v0.3.5

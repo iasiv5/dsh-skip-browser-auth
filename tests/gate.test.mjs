@@ -582,3 +582,30 @@ test('desktop execPath binaries across platforms fail the web proof', async (t) 
     assert.equal(evaluateGate(ctx), false, `desktop binary not denied for ${label}: ${execPath}`)
   }
 })
+
+test('grandchild node loader on the desktop slot stays dormant (2026-10-07/08 incident shape)', async (t) => {
+  // 0.3.9 事故修复：desktop 宿主为多进程树（Electron main → dsh-desktop-host →
+  // 纯 node 子进程跑 loader），0.3.8 的 argv/execPath 信号瞄错进程层双双落空。
+  // 槽位判别：ctx.baseUrl 目录基名 === 'desktop'（官方客户端恒用 desktop 槽位）
+  // ⇒ 无论宿主进程树形状如何，一律休眠。本用例完整复刻事故形态：
+  // 纯 node execPath + 无 dsh-desktop-host 的 argv + desktop 槽位 + 白名单 pair。
+  const { urls } = await writeGateFixtures(t, { runtimeVersion: '0.2.0-rc.2', connectionVersion: '0.2.0-rc.2' })
+  const ctx = probeCtx(urls)
+  ctx.baseUrl = 'file:///C:/Users/ies/.dsh/profiles/desktop/'
+  ctx.process = {
+    execPath: 'C:\\Program Files\\nodejs\\node.exe',
+    argv: ['C:\\Program Files\\nodejs\\node.exe', 'C:\\x\\resources\\dsh', 'C:\\Users\\ies\\.dsh\\profiles\\desktop'],
+  }
+  assert.equal(evaluateGate(ctx), false)
+  assert.equal(evaluateWith(ctx, GATE_PROFILE_EXPRESSION), null)
+})
+
+test('web and headless slots keep activating with a node host (slot matrix)', async (t) => {
+  for (const base of ['file:///home/ubuntu/.dsh/profiles/web/', 'file:///home/u/.dsh/profiles/headless/']) {
+    const { urls } = await writeGateFixtures(t)
+    const ctx = probeCtx(urls)
+    ctx.baseUrl = base
+    ctx.process = { execPath: '/usr/bin/node', argv: ['/usr/bin/node', '/x/dsh'] }
+    assert.equal(evaluateGate(ctx), true, `slot ${base} must stay active with a node host`)
+  }
+})
