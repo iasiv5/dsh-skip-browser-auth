@@ -390,5 +390,5 @@ resolver 缺失（`internal`/`resolveSync` 不存在）⇒ 探针 `null`（休�
 
 ### 7.7 实机状态（发版后回填）
 
-- web 0.2.0-rc.2 升级零回归断言：待执行（Task 12）。
+- web 0.2.0-rc.2 升级零回归断言：**已通过（2026-10-07 22:44 服务重启后）**——横幅逐字输出（Oct 07 22:44:27）、无 token `GET /` 200、伪造 Host 403、`/?token=x` 303 `location: ./`；web profile 预检 `grep -c "dsh-desktop-host$"` = 0。
 - desktop dormant 基线断言：待执行（主人在 Windows 机按 `docs/DESKTOP-DORMANT-CHECKLIST.md` 执行后回填）。
