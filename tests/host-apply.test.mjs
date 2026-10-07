@@ -236,3 +236,18 @@ test('backstop failure fires before service creation, route registration, and wa
   assert.equal(routes.length, 0)
   assert.equal(warnings.length, 0)
 })
+
+test('backstop negative C: desktop host package present — fail loud before any route', async (t) => {
+  // 桌面宿主信号在场 ⇒ backstop 镜像检测先于锚点解析 fail loud
+  // （纵深防御：正常流程第①道探针已休眠，此层只防「patch 激活但不应激活」）。
+  const { urls } = await writeGateFixtures(t, { desktopHost: true })
+  const { ctx, routes } = makeContext()
+  const { self } = fakeSelfWithRow()
+  ctx.provide('loader', fakeLoader(urls))
+  ctx.fiber = { entry: self }
+  await assert.rejects(
+    apply(ctx, {}),
+    /desktop profile not supported.*disable or uninstall the plugin/,
+  )
+  assert.equal(routes.length, 0)
+})

@@ -15,10 +15,13 @@ import z from '@deepseek-ai/schemastery'
 import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
 import {
   CONNECTION_PACKAGE,
+  DESKTOP_HOST_PACKAGE,
+  detectHostProfile,
   GATE_ANCHOR_PACKAGES,
   GATE_VERSIONS,
   isActiveCompatibilityProfileId,
   resolveActiveCompatibilityProfile,
+  type HostProfile,
 } from './gate.js'
 import { COMPATIBILITY_PROFILES, type CompatibilityProfile } from './compatibility.js'
 import { loadRuntimeConnectionModule } from './connection-runtime.js'
@@ -85,6 +88,11 @@ function profileById(value: unknown): CompatibilityProfile | undefined {
   return COMPATIBILITY_PROFILES.find((profile) => profile.id === value && profile.status === 'active')
 }
 
+/**
+ * direct（无 loader/fiber entry）上下文的 profile 兜底：仅纯单测/dev 树可达。
+ * 宿主形态按 'web' 处理（dev 树即 web）——desktop 判定需要 resolver，真 desktop
+ * 上必然先经过 assertGateBackstop 的镜像检测 fail loud，不会走到这里。
+ */
 function directProfile(requestedProfile: unknown): CompatibilityProfile {
   if (requestedProfile !== undefined) {
     const requested = profileById(requestedProfile)
@@ -123,6 +131,13 @@ function assertGateBackstop(ctx: Context, requestedProfile?: string): Compatibil
 
   const baseUrl = (ctx as { baseUrl?: string }).baseUrl ?? ''
   const internal = loader.internal
+  // 宿主 profile 镜像检测（2026-10-07 web-only 门控，纵深防御层）：desktop 信号在
+  // 场 ⇒ fail loud。正常流程第①道探针已休眠、apply 不会被调；此层只防「patch 激活
+  // 但不应激活」。语义与 detectHostProfile/表达式层一致（docs/COMPATIBILITY.md §7）。
+  const hostProfile = detectHostProfile(internal, baseUrl)
+  if (hostProfile === 'desktop') {
+    throw new Error(`@iasiv5/dsh-skip-browser-auth: desktop profile not supported; disable or uninstall the plugin (${DESKTOP_HOST_PACKAGE} present)`)
+  }
   const versions: string[] = []
   for (const anchorPackage of GATE_ANCHOR_PACKAGES) {
     const specifier = `${anchorPackage}/package.json`
@@ -140,7 +155,7 @@ function assertGateBackstop(ctx: Context, requestedProfile?: string): Compatibil
     versions.push(manifest.version)
   }
 
-  const profile = resolveActiveCompatibilityProfile(versions[0], versions[1])
+  const profile = resolveActiveCompatibilityProfile(versions[0], versions[1], hostProfile)
   if (profile === undefined) {
     throw new Error(`@iasiv5/dsh-skip-browser-auth: gate anchors ${GATE_ANCHOR_PACKAGES[0]}=${String(versions[0])}, ${GATE_ANCHOR_PACKAGES[1]}=${String(versions[1])} do not resolve to one active compatibility profile; whitelist is ${WHITELIST_TEXT}; disable or uninstall the plugin`)
   }

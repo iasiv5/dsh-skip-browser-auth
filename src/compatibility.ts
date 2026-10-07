@@ -13,6 +13,13 @@ export type HostAdapterKind = 'legacy-web' | 'carrier-neutral' | 'carrier-neutra
 export type ClientVariant = 'rc12' | 'rc15' | 'rc17'
 
 /**
+ * 运行时宿主形态（host profile）：web = 通用 Web runtime；desktop = 内置
+ * `@deepseek-ai/dsh-desktop-host` 的桌面 runtime。当前策略 web-only：desktop 一律
+ * dormant（docs/COMPATIBILITY.md §7）。
+ */
+export type HostProfile = 'web' | 'desktop'
+
+/**
  * BrowserAuth stub semantics consumed by a profile's host generation.
  *
  * - `root`: 0.1.2/0.1.5 generation — the app lives at `/`; the token-clean
@@ -36,6 +43,7 @@ export const COMPATIBILITY_PROFILES = [
     clientVariant: 'rc12',
     requiresRecoveryGlobal: false,
     browserAuthSemantics: 'root',
+    hostProfiles: ['web'],
     status: 'active',
   },
   {
@@ -52,6 +60,7 @@ export const COMPATIBILITY_PROFILES = [
     clientVariant: 'rc15',
     requiresRecoveryGlobal: true,
     browserAuthSemantics: 'root',
+    hostProfiles: ['web'],
     // Promoted after the carrier-neutral host/client adapter and fixture path
     // are implemented; real deployment validation remains documented separately.
     status: 'active',
@@ -97,6 +106,7 @@ export const COMPATIBILITY_PROFILES = [
     clientVariant: 'rc17',
     requiresRecoveryGlobal: true,
     browserAuthSemantics: 'mount-preserving',
+    hostProfiles: ['web'],
     // Promoted together with the adapter/client implementation; the fixture
     // composition suite and the real 0.1.7-rc.2 deployment checklist are the
     // promotion evidence (docs/COMPATIBILITY.md §5.4, docs/DESIGN.md).
@@ -130,13 +140,17 @@ export function resolveCompatibilityProfile(
     pair.runtime === runtimeVersion && pair.connection === connectionVersion))
 }
 
-/** Resolve only a profile whose implementation is promoted to active. */
+/** Resolve only a profile whose implementation is promoted to active AND whose
+ *  hostProfiles admit the given host profile（未知宿主形态一律无匹配，fail-closed）。 */
 export function resolveActiveCompatibilityProfile(
   runtimeVersion: unknown,
   connectionVersion: unknown,
+  hostProfile: HostProfile,
 ): CompatibilityProfile | undefined {
   const profile = resolveCompatibilityProfile(runtimeVersion, connectionVersion)
-  return profile?.status === 'active' ? profile : undefined
+  return profile?.status === 'active' && (profile.hostProfiles as readonly string[]).includes(hostProfile)
+    ? profile
+    : undefined
 }
 
 export function isActiveCompatibilityProfileId(value: unknown): value is CompatibilityProfileId {
@@ -144,4 +158,4 @@ export function isActiveCompatibilityProfileId(value: unknown): value is Compati
 }
 
 /** Small JSON-safe table embedded into the Loader `!!js` expression. */
-export const GATE_PROFILE_TABLE = COMPATIBILITY_PROFILES.map(({ id, pairs }) => ({ id, pairs }))
+export const GATE_PROFILE_TABLE = COMPATIBILITY_PROFILES.map(({ id, pairs, hostProfiles }) => ({ id, pairs, hostProfiles }))

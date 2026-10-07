@@ -130,3 +130,25 @@ test('bundled-connection-on-old-host composition keeps both rows dormant (2026-0
   assert.equal(evaluateWith(ctx, patchList[0].disabled.__jsExpr), false)
   assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), true)
 })
+
+test('generated patch embeds the desktop-host gate in all three expressions', () => {
+  // 官方行 disabled、insert 行 config.compatibilityProfile、insert 行 disabled 三处
+  // 内嵌链都必须携带 desktop 门控（单点源常量的传播断言）。
+  const raw = readFileSync(patchPath, 'utf8')
+  const occurrences = raw.split('@deepseek-ai/dsh-desktop-host').length - 1
+  assert.ok(occurrences >= 3, `expected the desktop-host specifier in all three expressions, got ${occurrences}`)
+})
+
+test('patch expressions stay dormant when the desktop host package is present', async (t) => {
+  // 2026-10-07 web-only 门控：desktop 信号在场 ⇒ 探针假、profile null、插入行 disabled
+  // （disabled = !(行绑定)，desktop ⇒ 行绑定 false ⇒ true，与组合断言 trusted.disabled === true 同向）。
+  const { urls } = await writeGateFixtures(t, { desktopHost: true })
+  const official = {
+    options: { id: 'connection', name: CONNECTION_PACKAGE },
+    disabled: true,
+  }
+  const ctx = activeRowCtx(official, urls)
+  assert.equal(evaluateWith(ctx, patchList[0].disabled.__jsExpr), false)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].config.compatibilityProfile.__jsExpr), null)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), true)
+})

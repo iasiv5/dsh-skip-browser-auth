@@ -43,6 +43,7 @@ const COMPATIBILITY_PROFILES = [
     hostAdapter: 'legacy-web',
     clientVariant: 'rc12',
     requiresRecoveryGlobal: false,
+    hostProfiles: ['web'],
     status: 'active',
   },
   {
@@ -54,6 +55,7 @@ const COMPATIBILITY_PROFILES = [
     hostAdapter: 'carrier-neutral',
     clientVariant: 'rc15',
     requiresRecoveryGlobal: true,
+    hostProfiles: ['web'],
     status: 'active',
   },
 ] as const
@@ -67,6 +69,7 @@ const COMPATIBILITY_PROFILES = [
 - `GATE_PROBE_EXPRESSION` 只对 `status: 'active'` 的 profile 返回 true。
 - patch 把 profile id 传给插件行；host backstop 再以 manifest 验证一遍。
 - host 通过 `__DSH_SKIP_BROWSER_AUTH_PROFILE__` 把同一个 profile id 传给 client dispatcher。
+- `hostProfiles`：允许激活的宿主 profile 集合，当前恒为 `['web']`（web-only）；探针表达式与 apply backstop 双层校验，语义见 §7。
 
 ### 2.1 安全不变量
 
@@ -328,6 +331,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。
 - 真实 DSH `0.1.7-rc.2` 宿主 active checklist + 卸载回滚演练（2026-09-26，见 `docs/DESIGN.md`）。
 - 真实 DSH `0.2.0-rc.1` 宿主 active checklist（2026-09-29：宿主当日运行 rc.1，`/` 200、BrowserAuth skipped 横幅在案）。
+- host profile 门控（§7）：desktop 桩包在场 + 白名单 pair ⇒ 组合级整体休眠；desktop-host 查询抛错/空值/怪值按包不存在处理（web 继续）。
 
 尚未宣称：
 
@@ -337,3 +341,54 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 在真实运行 DSH `0.2.0-rc.2` 服务上的 active 部署结果（宿主已于 2026-09-29 升级 rc.2；本插件 0.3.5 装机后按 DESIGN 清单执行并回填本节）。
 
 已知无关问题（非本插件职责，记录备查）：同宿主上第三方插件对 0.1.7 的不适配——`dsh-auth` 的 `/auth/login` 在 edge 请求下因 `ctx.settings.get()`（其源码自注的 rc.1 shim）对 0.1.7 settings API 抛 TypeError；`modsearch` 报 `scope.settings.register is not a function`（同一 settings API 变化）；`copilot-authorization` 与官方 `dsh-authorization` 服务重名冲突。定性依据：dsh-auth 代码不依赖 connection 服务（登录页渲染路径无 connection 消费）；该 TypeError 首次出现于 2026-09-26 宿主升级 0.1.7 之后，与本插件激活无关（升级后至插件激活前 `/auth/login` 零访问，TypeError 首次触发于插件激活 51 秒后的 edge 请求，与同 boot 的 modsearch/settings 报错同源）。未做卸载态下的 edge 复现差分。
+
+## 7. Host profile policy
+
+> 2026-10-07 定稿（任务书 §0-§4 + 实机实测）。决策不重开；本节是 host profile 维度的唯一权威记录处。
+
+### 7.1 判定依据
+
+desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版本审计、无实机 active checklist；插件经 dsh-m 公开分发且 agent 是第一安装群体 ⇒ 需要代码级护栏而非文档约定。**拦「激活」不拦「安装」**：desktop 上可装、但必须休眠（dormant，非 fail-loud、非市场层拒装）。
+
+### 7.2 信号与语义
+
+信号：`ctx.loader.internal.resolveSync(ctx.baseUrl, …)` 解析 `@deepseek-ai/dsh-desktop-host/package.json`（表达式层内联 + `detectHostProfile()` Node 镜像，同语义）。四态：
+
+| resolver 对信号包的返回 | 判定 | 依据 |
+| --- | --- | --- |
+| 合法 `{url: string}` | **desktop** ⇒ 休眠 | 包存在即桌面宿主 |
+| 抛错 | 包不存在 ⇒ **web 继续** | 组合测试 fake 与真实 v1 loader 契约 |
+| `null` / `undefined` | 包不存在 ⇒ **web 继续** | 同上（compose fake 即返回 null） |
+| `url` 非字符串 | 包不存在 ⇒ **web 继续** | 同上 |
+
+resolver 缺失（`internal`/`resolveSync` 不存在）⇒ 探针 `null`（休眠）。检测异常的 fail-closed 兜底是版本对判定本身：真异常时双锚点同样解析失败 ⇒ `null`。
+
+### 7.3 fail-closed 语义（双层）
+
+- 探针层（表达式）：desktop ⇒ `GATE_PROFILE_EXPRESSION` 为 `null`（由白名单表条目 `hostProfiles: ['web']` 条件统一拒绝，策略单一来源 `src/compatibility.ts`）⇒ 官方行 enabled、trusted 行 disabled、apply 不运行——安静休眠，与未知版本对同形态（判别法见 know-how 016）。
+- backstop 层（`assertGateBackstop`）：desktop ⇒ fail loud，完整文案 `@iasiv5/dsh-skip-browser-auth: desktop profile not supported; disable or uninstall the plugin (@deepseek-ai/dsh-desktop-host present)`——仅防「patch 激活但不应激活」的绕过态。
+
+### 7.4 残余风险（书面化）
+
+- desktop 未来若移除/改名信号包 ⇒ 探针误判 web，而 desktop runtime 版本对（如 0.2.0-rc.2）与 web 白名单共享 ⇒ 可能误激活。兜底：任何新 runtime 版本进入白名单前必须走 §5.1 审计流程（届时必然重审 desktop 形态）+ 下述解冻条件。
+- 对称情形（web 侧反向污染）：web profile 下第三方插件经 hoisted 抬升携带 `@deepseek-ai/dsh-desktop-host` 依赖（gate.ts 头注记载的同类抬升遮蔽机制）⇒ 信号误真 ⇒ 本插件安静休眠——方向 fail-closed，最坏损失是本插件不工作，无安全暴露。本仓库自身不可能引入该包：manifest 不变量（红线：dependencies 禁止任何 `@deepseek-ai` 包）+ `tests/manifest.test.mjs` 看护。
+
+### 7.5 解冻条件（本次不实现）
+
+同时满足才允许把 `'desktop'` 加入 hostProfiles：
+
+1. 出现真实 desktop 需求；
+2. desktop 信号 + fixture 全套验证；
+3. desktop 实机 checklist（无 token `GET /` 401→200、伪造 Host → 403、`/?token=x` → 303、卸载后官方行为原样恢复）+ 暴露模型书面化（回环绑定 + 本机进程可信度假设）。基线形态见 `docs/DESKTOP-DORMANT-CHECKLIST.md`。
+
+### 7.6 实机事实（2026-10-07）
+
+- desktop runtime 0.2.0-rc.2（`dsh --version` 与 runtime.json `desktopVersion` 双证）；Desktop Web GUI 以 127.0.0.1:19387 仅回环绑定（netstat 实证）。
+- BrowserAuth 激活中：无 token `GET /` → 401；伪造 Host → 401（休眠态无栅栏，401 即正确，勿误判）。
+- `app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/` 存在（堆栈实证）；web runtime 树无此包（web 机 `ls ~/.dsh/profiles/node_modules/@deepseek-ai/ | grep -c "dsh-desktop-host$"` = 0，2026-10-07 复核）。
+- fixture 层实测补充：rc202 官方组合休眠态在最小 fixture 下 `/`、`/api/*` 均为 404 空体（0.2.0 代际 frontend-static 走 registerFallback + authorizeIndex(BrowserAuth)，无凭据最小环境不服务索引；webserver 默认 404 空体，与 0.1.1-rc.2 代际的 `'not found'` 文本体不同），见 `tests/composition/desktop-dormant.test.mjs` 注释。
+
+### 7.7 实机状态（发版后回填）
+
+- web 0.2.0-rc.2 升级零回归断言：待执行（Task 12）。
+- desktop dormant 基线断言：待执行（主人在 Windows 机按 `docs/DESKTOP-DORMANT-CHECKLIST.md` 执行后回填）。

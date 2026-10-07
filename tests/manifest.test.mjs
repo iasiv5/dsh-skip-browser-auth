@@ -95,3 +95,13 @@ test('pinned connection copy loads lazily (no static @deepseek-ai import reaches
     'no-loader fallback must reach the pinned copy via dynamic import() only',
   )
 })
+
+test('desktop-host signal stays out of dependencies (stub fixtures only)', () => {
+  // web-only 门控（2026-10-07）的 desktop 信号包只允许以测试桩包形式存在；
+  // 若进入 dependencies/devDependencies，hoisted 抬升会在 web 机上污染宿主检测
+  // （gate.ts 头注记载的同类抬升遮蔽机制）。
+  const dependencies = manifest.dependencies ?? {}
+  const devDependencies = manifest.devDependencies ?? {}
+  assert.equal(dependencies['@deepseek-ai/dsh-desktop-host'], undefined)
+  assert.equal(devDependencies['@deepseek-ai/dsh-desktop-host'], undefined)
+})

@@ -17,7 +17,7 @@ _Avoid_: 认证、安全检查（泛称）、防火墙
 _Avoid_: adapter（描述 Replacement 本身时）、hook、覆盖层、monkey patch
 
 **compatibility profile（兼容性 profile）**:
-一个完整的 DSH runtime/connection 版本对与其实现契约的绑定：包含 profile id、精确版本对、host adapter、client variant、route/body 语义和 active/candidate 状态。profile 是版本兼容的单一事实源。
+一个完整的 DSH runtime/connection 版本对与其实现契约的绑定：包含 profile id、精确版本对、host adapter、client variant、route/body 语义、允许激活的宿主形态（`hostProfiles`，见 host profile 词条）和 active/candidate 状态。profile 是版本兼容的单一事实源。
 当前 profile：`legacy-web-v1`（0.1.2-rc.1）、`carrier-neutral-v2`（0.1.5-rc.1、0.1.5-rc.2）与 `carrier-neutral-v3`（0.1.7-rc.1、0.1.7-rc.2、0.2.0-rc.1、0.2.0-rc.2）。
 _Avoid_: 只写“白名单版本”而不说明代际契约
 
@@ -25,12 +25,16 @@ _Avoid_: 只写“白名单版本”而不说明代际契约
 一组可共享 host/client 实现契约的 profile。新版本只有在 API、DI、route、body 和 client bundle 契约都相同并完成验证后，才能加入已有代际；出现不兼容变化必须新增代际和 adapter/client variant。
 _Avoid_: 用 semver 范围把不同代际合并
 
+**host profile（宿主 profile）**:
+运行时宿主形态维度：web（通用 Web runtime）与 desktop（内置 `@deepseek-ai/dsh-desktop-host` 的桌面 runtime）。compatibility profile 的 `hostProfiles` 声明允许激活的宿主形态；desktop 检测信号 = loader resolver 能解析到该包，desktop 一律 dormant（设计行为，docs/COMPATIBILITY.md §7）。勿与 DSH 安装 profile（`~/.dsh/profiles` 安装槽位，如 web/headless/desktop）混用。
+_Avoid_: 平台、系统（泛称）、与安装槽位或 compatibility profile 混称
+
 **dormant（休眠）**:
-插件已安装但未激活 Replacement 的状态：官方行为分毫不变，插件不注册路由、不提供服务、不加载浏览器 bundle。未知 profile、candidate profile、混合版本对和探针失败均进入 dormant。
+插件已安装但未激活 Replacement 的状态：官方行为分毫不变，插件不注册路由、不提供服务、不加载浏览器 bundle。未知 profile、candidate profile、混合版本对、desktop 宿主 profile 和探针失败均进入 dormant。
 _Avoid_: 禁用、no-op 模式、未安装
 
 **self-gating（自门控）**:
-Replacement 是否激活由组合期的完整版本对探针和 profile 状态决定，而不是安装器预检或插件运行时补救。门控失败时一律回到 dormant。
+Replacement 是否激活由组合期的完整版本对探针、profile 状态与宿主 profile 决定，而不是安装器预检或插件运行时补救。门控失败时一律回到 dormant。
 _Avoid_: 运行时猜测、自动适配、能力碰运气
 
 **activation probe（激活探针）**:

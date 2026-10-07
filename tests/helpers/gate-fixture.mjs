@@ -32,6 +32,7 @@ async function writePackageFixture(root, pkg, { segmentVersion, manifestVersion,
 export async function writeGateFixtures(t, {
   runtimeVersion,
   connectionVersion,
+  desktopHost = false,
   layout = 'pnpm',
 } = {}) {
   const tmp = await mkdtemp(join(tmpdir(), 'dsh-sba-gate-'))
@@ -49,6 +50,16 @@ export async function writeGateFixtures(t, {
   const urls = {
     [`${GATE_ANCHOR_PACKAGES[0]}/package.json`]: runtime.url,
     [`${GATE_ANCHOR_PACKAGES[1]}/package.json`]: connection.url,
+  }
+  if (desktopHost) {
+    // desktop 宿主信号桩包：探针只看「解析成功拿到合法 URL」，manifest 永不被读取；
+    // 版本值仅求真实感（0.2.0-rc.2 = 2026-10-07 desktop 实机版本）。
+    const desktop = await writePackageFixture(tmp, '@deepseek-ai/dsh-desktop-host', {
+      segmentVersion: '0.2.0-rc.2',
+      manifestVersion: '0.2.0-rc.2',
+      layout,
+    })
+    urls['@deepseek-ai/dsh-desktop-host/package.json'] = desktop.url
   }
   t.after(() => rm(tmp, { recursive: true, force: true }))
   return { tmp, urls }

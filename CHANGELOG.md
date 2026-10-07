@@ -4,9 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
-## [Unreleased]
+## [0.3.6] - 2026-10-07
 
-- 新增 `scripts/audit-candidate.mjs`（`npm run audit-candidate -- <version>`）：以白名单最新 pair 为基准自动完成 docs/COMPATIBILITY.md §5.1 第 1–3 条的锚点包 tarball 审计，判级 `RE-PUBLISH` / `REPUBLISH-WITH-REVIEW` / `CONTRACT-CHANGED`（含 connection 行对比与 loader seam 抽查）；离线纯函数单测见 tests/audit-candidate.test.mjs
+- 新增宿主 profile 门控：仅支持 web profile；desktop profile（存在 `dsh-desktop-host` 的环境）一律自动休眠（设计行为），探针与 `apply()` backstop 双层 fail-closed
+- web 侧兼容版本对不变：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`
+- 新增 `scripts/audit-candidate.mjs`（`npm run audit-candidate -- <version>`）：以白名单最新 pair 为基准自动完成 docs/COMPATIBILITY.md §5.1 第 1–3 条的锚点包 tarball 审计，判级 `RE-PUBLISH` / `REPUBLISH-WITH-REVIEW` / `CONTRACT-CHANGED`（含 connection 行对比与 loader seam 抽查）；离线纯函数单测见 tests/audit-candidate.test.mjs（原 Unreleased 条目随本版发布）
+- 新增 `docs/DESKTOP-DORMANT-CHECKLIST.md`（desktop 机休眠基线验证清单）
 
 ## [0.3.5] - 2026-09-29
 
@@ -71,7 +74,9 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.6...HEAD
+[0.3.6]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.5...v0.3.6
+[0.3.5]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.1...v0.3.2

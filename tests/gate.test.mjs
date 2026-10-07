@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import {
   COMPATIBILITY_PROFILES,
   CONNECTION_PACKAGE,
+  DESKTOP_HOST_PACKAGE,
   GATE_RUNTIME_PACKAGE,
   GATE_VERSIONS,
   GATE_VERSION,
@@ -70,6 +71,11 @@ test('gate constants have the pinned profile and anchor values', () => {
   assert.deepEqual(COMPATIBILITY_PROFILES.map(profile => profile.id), ['legacy-web-v1', 'carrier-neutral-v2', 'carrier-neutral-v3'])
   // 锚点顺序：宿主 runtime 本体在前（版本段即宿主版本），被替换对象在后。
   assert.deepEqual([...GATE_ANCHOR_PACKAGES], ['@deepseek-ai/dsh', '@deepseek-ai/dsh-client-connection'])
+  // 宿主 profile 门控（2026-10-07）：desktop 信号包常量与 web-only 策略。
+  assert.equal(DESKTOP_HOST_PACKAGE, '@deepseek-ai/dsh-desktop-host')
+  for (const profile of COMPATIBILITY_PROFILES) {
+    assert.deepEqual([...profile.hostProfiles], ['web'], `profile ${profile.id} must stay web-only`)
+  }
 })
 
 test('compatibility profiles match complete runtime/connection pairs only', () => {
@@ -460,4 +466,43 @@ test('published manifest pollution invariant: the repo itself must not resolve @
     resolved = require.resolve('@deepseek-ai/dsh/package.json')
   } catch {}
   assert.equal(resolved, null, `@deepseek-ai/dsh must not be resolvable from the plugin tree, got ${String(resolved)}`)
+})
+
+// —— host profile 门控（web-only / desktop 休眠，2026-10-07 任务书 §2）——
+// desktop specifier 在本组用例中硬编码：实现前先红（Task 2），常量值由「gate
+// constants」用例在实现任务中钉住，避免用例间循环依赖。
+const DESKTOP_SPECIFIER = '@deepseek-ai/dsh-desktop-host/package.json'
+
+// 包装 resolveSync：仅拦截 desktop specifier 的返回/抛错，其余走按 specifier 分发的 fake。
+function interceptDesktop(ctx, intercept) {
+  const base = ctx.loader.internal.resolveSync
+  ctx.loader.internal.resolveSync = (...args) => {
+    const specifier = typeof args[1] === 'object' ? args[1].specifier : args[0]
+    if (specifier === DESKTOP_SPECIFIER) return intercept()
+    return base(...args)
+  }
+  return ctx
+}
+
+test('desktop-host present on a whitelisted pair forces the probe dormant', async (t) => {
+  const { urls } = await writeGateFixtures(t, { desktopHost: true })
+  assert.equal(evaluateGate(probeCtx(urls)), false)
+  assert.equal(evaluateWith(probeCtx(urls), GATE_PROFILE_EXPRESSION), null)
+})
+
+test('desktop-host absent keeps web behavior (resolver returns null treated as absent)', async (t) => {
+  const { urls } = await writeGateFixtures(t)
+  assert.equal(evaluateGate(probeCtx(urls)), true)
+})
+
+test('desktop-host lookup throwing is treated as absent (web continues)', async (t) => {
+  const { urls } = await writeGateFixtures(t)
+  const ctx = interceptDesktop(probeCtx(urls), () => { throw new Error('desktop lookup boom') })
+  assert.equal(evaluateGate(ctx), true)
+})
+
+test('desktop-host resolving to a non-string url is treated as absent', async (t) => {
+  const { urls } = await writeGateFixtures(t)
+  const ctx = interceptDesktop(probeCtx(urls), () => ({ url: 123 }))
+  assert.equal(evaluateGate(ctx), true)
 })

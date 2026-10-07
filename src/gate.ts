@@ -32,11 +32,21 @@
  *     环境无 require/模块导入，这是唯一受支持的同步内建模块获取方式）。
  * 两分支都拿不到精确版本 → dormant。任何异常一律 dormant（组合期绝不
  * fail loud；最后防线在 apply 内 backstop）。
+ *
+ * 宿主 profile 门控（2026-10-07，web-only / desktop 休眠）：表达式在版本对判定
+ * 之前先解析 desktop 信号包（DESKTOP_HOST_PACKAGE）——解析出合法 {url: string}
+ * ⇒ desktop，由白名单表条目的 hostProfiles: ['web'] 条件统一拒绝（休眠，
+ * 策略单一来源 src/compatibility.ts）；抛错/返回空值/url 非字符串 ⇒ 视为包
+ * 不存在（web 继续，组合测试 fake 与真实 v1 loader 契约即如此）；resolver
+ * 缺失仍走原有 null 分支。检测异常的 fail-closed 兜底是版本对判定本身
+ * （真异常时双锚点同样解析失败 ⇒ null）。Node 侧镜像见 detectHostProfile；
+ * 语义与解冻条件记录于 docs/COMPATIBILITY.md §7。
  */
 
 import {
   ACTIVE_COMPATIBILITY_PROFILE_IDS,
   GATE_PROFILE_TABLE,
+  type HostProfile,
 } from './compatibility.js'
 
 export {
@@ -48,12 +58,15 @@ export {
   resolveActiveCompatibilityProfile,
   resolveCompatibilityProfile,
 } from './compatibility.js'
+export type { HostProfile } from './compatibility.js'
 
 export const CONNECTION_PACKAGE = '@deepseek-ai/dsh-client-connection'
 /** 宿主 runtime 本体包：探针的第一锚点，版本即宿主 dsh 版本。 */
 export const GATE_RUNTIME_PACKAGE = '@deepseek-ai/dsh'
 /** 探针锚点（顺序即求值顺序）：宿主 runtime 本体在前，被替换对象在后。 */
 export const GATE_ANCHOR_PACKAGES = [GATE_RUNTIME_PACKAGE, CONNECTION_PACKAGE] as const
+/** desktop 宿主信号包：仅 desktop runtime 携带；解析出合法 URL 即判定 desktop（web-only 门控）。 */
+export const DESKTOP_HOST_PACKAGE = '@deepseek-ai/dsh-desktop-host'
 
 /**
  * 从已解析 URL 提取 pnpm store 版本段的正则源（`+name@VER_` / `+name@VER/`）。
@@ -72,7 +85,7 @@ const GATE_ANCHOR_TABLE = GATE_ANCHOR_PACKAGES.map((pkg) => [pkg, versionSegment
 // 逐锚点解析 `锚点包/package.json`，返回完整 runtime/connection pair 对应的
 // profile id；candidate profile 也可被识别，是否允许激活由下方 boolean probe
 // 根据 profile status 决定。解析失败、未知 pair 或混合 pair 一律返回 null。
-export const GATE_PROFILE_EXPRESSION = `(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return null; const versionOfUrl = (url, patternSource) => { if (typeof url !== 'string') return null; const decoded = decodeURIComponent(url); const segmented = decoded.match(new RegExp(patternSource)); if (segmented !== null) return segmented[1]; if (decoded.slice(0, 5) === 'file:') { const processRef = globalThis.process; if (processRef === null || typeof processRef !== 'object' || typeof processRef.getBuiltinModule !== 'function') return null; const fsModule = processRef.getBuiltinModule('node:fs'); const urlModule = processRef.getBuiltinModule('node:url'); if (!fsModule || typeof fsModule.readFileSync !== 'function' || !urlModule || typeof urlModule.fileURLToPath !== 'function') return null; const manifest = JSON.parse(fsModule.readFileSync(urlModule.fileURLToPath(url), 'utf8')); return manifest !== null && typeof manifest === 'object' && typeof manifest.version === 'string' ? manifest.version : null; } return null; }; const anchors = ${JSON.stringify(GATE_ANCHOR_TABLE)}; const versions = []; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + '/package.json'; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return null; } let anchorVersion; try { anchorVersion = versionOfUrl(url, patternSource); } catch (gateError) { return null; } if (anchorVersion === null) return null; versions.push(anchorVersion); } const profiles = ${JSON.stringify(GATE_PROFILE_TABLE)}; for (const profile of profiles) { if (profile.pairs.some((pair) => pair.runtime === versions[0] && pair.connection === versions[1])) return profile.id; } return null; } catch (gateError) { return null; } })()`
+export const GATE_PROFILE_EXPRESSION = `(() => { try { const internal = ctx.loader && ctx.loader.internal; if (!internal || typeof internal.resolveSync !== 'function') return null; const desktopSpecifier = ${JSON.stringify(DESKTOP_HOST_PACKAGE)} + '/package.json'; let hostProfile; try { const desktopResolved = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier: desktopSpecifier, attributes: {} }) : internal.resolveSync(desktopSpecifier, ctx.baseUrl, {}); const desktopUrl = desktopResolved === null || typeof desktopResolved !== 'object' ? undefined : desktopResolved.url; hostProfile = typeof desktopUrl === 'string' ? 'desktop' : 'web'; } catch (hostError) { hostProfile = 'web'; } const versionOfUrl = (url, patternSource) => { if (typeof url !== 'string') return null; const decoded = decodeURIComponent(url); const segmented = decoded.match(new RegExp(patternSource)); if (segmented !== null) return segmented[1]; if (decoded.slice(0, 5) === 'file:') { const processRef = globalThis.process; if (processRef === null || typeof processRef !== 'object' || typeof processRef.getBuiltinModule !== 'function') return null; const fsModule = processRef.getBuiltinModule('node:fs'); const urlModule = processRef.getBuiltinModule('node:url'); if (!fsModule || typeof fsModule.readFileSync !== 'function' || !urlModule || typeof urlModule.fileURLToPath !== 'function') return null; const manifest = JSON.parse(fsModule.readFileSync(urlModule.fileURLToPath(url), 'utf8')); return manifest !== null && typeof manifest === 'object' && typeof manifest.version === 'string' ? manifest.version : null; } return null; }; const anchors = ${JSON.stringify(GATE_ANCHOR_TABLE)}; const versions = []; for (const [anchorPackage, patternSource] of anchors) { const specifier = anchorPackage + '/package.json'; let url; try { url = internal.version === 'v2' ? internal.resolveSync(ctx.baseUrl, { specifier, attributes: {} }).url : internal.resolveSync(specifier, ctx.baseUrl, {}).url; } catch (gateError) { return null; } let anchorVersion; try { anchorVersion = versionOfUrl(url, patternSource); } catch (gateError) { return null; } if (anchorVersion === null) return null; versions.push(anchorVersion); } const profiles = ${JSON.stringify(GATE_PROFILE_TABLE)}; for (const profile of profiles) { if (profile.hostProfiles.includes(hostProfile) && profile.pairs.some((pair) => pair.runtime === versions[0] && pair.connection === versions[1])) return profile.id; } return null; } catch (gateError) { return null; } })()`
 // Boolean activation probe: only active profiles disable the official row.
 // A known candidate profile remains dormant until its host/client adapter is
 // promoted, while the profile expression still exposes its exact pair id.
@@ -90,4 +103,29 @@ export const GATE_ROW_ALLOWED_EXPRESSION = `(() => { try { const self = ctx[Symb
 export function evaluateGate(ctx: object): boolean {
   // 与 vendor/loader/src/config/utils.ts 的 evaluate 同语义：with(ctx) + eval。
   return new Function('ctx', 'expr', 'with (ctx) { return eval(expr) }')(ctx, GATE_PROBE_EXPRESSION) as boolean
+}
+
+/** backstop 侧宿主检测用的最小 resolver 结构视图（loader.internal 的同构子集）。 */
+export interface GateResolverLike {
+  readonly version?: unknown
+  resolveSync(...args: unknown[]): { url?: unknown } | undefined
+}
+
+/**
+ * Node 侧宿主形态检测（apply backstop 镜像）：与 GATE_PROFILE_EXPRESSION 内联检测
+ * 同语义——解析 desktop 信号包得到合法 {url: string} ⇒ 'desktop'；抛错/空值/url
+ * 非字符串 ⇒ 视为包不存在 ⇒ 'web'（fail-closed 兜底是后续版本对判定）。
+ * 调用方需已确认 resolver 存在（assertGateBackstop 的 presence 检查先于此执行）。
+ */
+export function detectHostProfile(internal: GateResolverLike, baseUrl: string): HostProfile {
+  const specifier = `${DESKTOP_HOST_PACKAGE}/package.json`
+  try {
+    const resolved = internal.version === 'v2'
+      ? internal.resolveSync(baseUrl, { specifier, attributes: {} })
+      : internal.resolveSync(specifier, baseUrl, {})
+    const url = (resolved as { url?: unknown } | null | undefined)?.url
+    return typeof url === 'string' ? 'desktop' : 'web'
+  } catch {
+    return 'web'
+  }
 }

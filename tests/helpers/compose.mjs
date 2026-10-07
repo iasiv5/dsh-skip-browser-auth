@@ -64,7 +64,7 @@ export function rawRequest(port, { path, method = 'GET', headers = {}, body } = 
  * @param options.webRuntime - 提供给 `ctx.webRuntime` 的服务值。
  * @returns context、服务端口与临时根目录。
  */
-export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, runtimeVersion, layout = 'pnpm', extraPatches = [], webRuntime } = {}) {
+export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, runtimeVersion, desktopHost = false, layout = 'pnpm', extraPatches = [], webRuntime } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'dsh-sba-compose-'))
 
   // 真实探针 fixture：pnpm 布局为 gate-fixture/<pnpm 风格路径段>/…（段含版本），
@@ -85,6 +85,10 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
   const fixtureUrls = {
     [`${CONNECTION_PACKAGE}/package.json`]: connectionUrl,
     [`${GATE_RUNTIME_PACKAGE}/package.json`]: runtimeUrl,
+  }
+  if (desktopHost) {
+    // desktop 宿主信号桩包（2026-10-07 web-only 门控）：探针只看解析成功，manifest 不被读取。
+    fixtureUrls['@deepseek-ai/dsh-desktop-host/package.json'] = await writeAnchorFixture('@deepseek-ai/dsh-desktop-host', '0.2.0-rc.2')
   }
 
   // dist fixture：index.html 含 'shell' 标记，另有 /app.js 静态资源。
