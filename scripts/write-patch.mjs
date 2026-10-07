@@ -54,9 +54,10 @@ const header = [
   '# 任何门控条件不成立（锚点解析失败、版本漂移、行不存在、名字漂移、',
   '# 官方行未禁用），Replacement 一律保持 dormant（fail-closed）。探针为假时，',
   '# 即使后续 patch 层把官方行强制 disabled，行绑定内嵌探针仍保持 dormant。',
-  '# 宿主 profile 门控（web-only）：表达式先解析 @deepseek-ai/dsh-desktop-host/package.json，',
-  '# 解析出合法 URL 即 desktop ⇒ 探针为 null（desktop 一律休眠，设计行为）；解析异常',
-  '# 按包不存在处理（web 继续），兜底仍是完整版本对白名单（fail-closed）。',
+  '# 宿主 profile 门控（web-only，0.3.8 三重判别）：desktop 否决 = desktop-host 包可解析',
+  '# ∨ 宿主 argv 含 dsh-desktop-host；web 证明 = 宿主二进制为 node/node.exe。任一',
+  '# desktop 信号命中或 web 证明不成立 ⇒ 探针为 null（desktop 一律休眠，default-deny）；',
+  '# 兜底仍是完整版本对白名单（fail-closed）。',
   '',
 ].join('\n')
 

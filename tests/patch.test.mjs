@@ -152,3 +152,20 @@ test('patch expressions stay dormant when the desktop host package is present', 
   assert.equal(evaluateWith(ctx, patchList[1].insert[0].config.compatibilityProfile.__jsExpr), null)
   assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), true)
 })
+
+test('patch expressions stay dormant under desktop launcher argv (package unreachable)', async (t) => {
+  // 0.3.8：desktop-host 包不可达 + 宿主 argv 携带 launcher ⇒ 三处内嵌表达式全部休眠。
+  const { urls } = await writeGateFixtures(t)
+  const official = {
+    options: { id: 'connection', name: CONNECTION_PACKAGE },
+    disabled: true,
+  }
+  const ctx = activeRowCtx(official, urls)
+  ctx.process = {
+    execPath: 'C:\\Program Files\\nodejs\\node.exe',
+    argv: ['C:\\app\\DeepSeek Harness.exe', 'C:\\x\\@deepseek-ai\\dsh-desktop-host\\lib\\index.js'],
+  }
+  assert.equal(evaluateWith(ctx, patchList[0].disabled.__jsExpr), false)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].config.compatibilityProfile.__jsExpr), null)
+  assert.equal(evaluateWith(ctx, patchList[1].insert[0].disabled.__jsExpr), true)
+})

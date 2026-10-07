@@ -26,7 +26,7 @@ _Avoid_: 只写“白名单版本”而不说明代际契约
 _Avoid_: 用 semver 范围把不同代际合并
 
 **host profile（宿主 profile）**:
-运行时宿主形态维度：web（通用 Web runtime）与 desktop（内置 `@deepseek-ai/dsh-desktop-host` 的桌面 runtime）。compatibility profile 的 `hostProfiles` 声明允许激活的宿主形态；desktop 检测信号 = loader resolver 能解析到该包，desktop 一律 dormant（设计行为，docs/COMPATIBILITY.md §7）。勿与 DSH 安装 profile（`~/.dsh/profiles` 安装槽位，如 web/headless/desktop）混用。
+运行时宿主形态维度：web（通用 Web runtime，宿主二进制为 node）与 desktop（Electron 宿主，argv 恒带 `dsh-desktop-host` 启动器，信号包在 app.asar 内）。compatibility profile 的 `hostProfiles` 声明允许激活的宿主形态；激活需要正向 web 证明（宿主二进制为 node ∧ 无 desktop 启动器）——default-deny：非 100% web 一律 dormant（设计行为，docs/COMPATIBILITY.md §7）。勿与 DSH 安装 profile（`~/.dsh/profiles` 安装槽位，如 web/headless/desktop）混用。
 _Avoid_: 平台、系统（泛称）、与安装槽位或 compatibility profile 混称
 
 **dormant（休眠）**:

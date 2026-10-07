@@ -1,7 +1,7 @@
 {
   "name": "@iasiv5/dsh-skip-browser-auth",
-  "version": "0.3.6",
-  "description": "替换官方 Connection 提供方跳过 BrowserAuth，免输 Token；已适配 0.1.2-rc.1、0.1.5-rc.1/rc.2、0.1.7-rc.1/rc.2 与 0.2.0-rc.1/rc.2，详见仓库。仅支持 web profile；desktop profile（存在 dsh-desktop-host 的环境）自动休眠，属设计行为。",
+  "version": "0.3.8",
+  "description": "替换官方 Connection 提供方跳过 BrowserAuth，免输 Token；已适配 0.1.2-rc.1、0.1.5-rc.1/rc.2、0.1.7-rc.1/rc.2 与 0.2.0-rc.1/rc.2，详见仓库。仅支持 web（宿主二进制须为 node）；desktop 宿主一律自动休眠（宿主进程判别），属设计行为。",
   "keywords": [
     "dsh",
     "deepseek-harness",

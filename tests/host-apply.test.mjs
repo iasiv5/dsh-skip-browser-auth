@@ -251,3 +251,29 @@ test('backstop negative C: desktop host package present — fail loud before any
   )
   assert.equal(routes.length, 0)
 })
+
+test('backstop negative C2: desktop launcher argv — fail loud before any route', async (t) => {
+  // 0.3.8 事故修复镜像：desktop-host 包不可达（不注册）但宿主 argv 携带
+  // dsh-desktop-host ⇒ backstop 仍 fail loud（先于锚点解析与任何 route）。
+  const { urls } = await writeGateFixtures(t)
+  const { ctx, routes } = makeContext()
+  const { self } = fakeSelfWithRow()
+  ctx.provide('loader', fakeLoader(urls))
+  ctx.fiber = { entry: self }
+  const originalArgv = process.argv
+  process.argv = [
+    'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\DeepSeek Harness.exe',
+    'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\resources\\app.asar\\node_modules\\@deepseek-ai\\dsh-desktop-host\\lib\\index.js',
+    'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\resources\\dsh',
+    'C:\\Users\\ies\\.dsh\\profiles\\desktop',
+  ]
+  try {
+    await assert.rejects(
+      apply(ctx, {}),
+      /desktop profile not supported.*disable or uninstall the plugin/,
+    )
+  } finally {
+    process.argv = originalArgv
+  }
+  assert.equal(routes.length, 0)
+})

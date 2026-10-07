@@ -350,27 +350,28 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版本审计、无实机 active checklist；插件经 dsh-m 公开分发且 agent 是第一安装群体 ⇒ 需要代码级护栏而非文档约定。**拦「激活」不拦「安装」**：desktop 上可装、但必须休眠（dormant，非 fail-loud、非市场层拒装）。
 
-### 7.2 信号与语义
+### 7.2 信号与语义（0.3.8 三重判别，default-deny）
 
-信号：`ctx.loader.internal.resolveSync(ctx.baseUrl, …)` 解析 `@deepseek-ai/dsh-desktop-host/package.json`（表达式层内联 + `detectHostProfile()` Node 镜像，同语义）。四态：
+设计公理（0.3.6 事故后确立，跨 Windows/macOS/Linux 全平台生效）：**激活需要正向 web 证明，休眠不需要理由**——误激活 desktop ⇒ 宿主不可启动；误休眠 web ⇒ 回到 token 输入且一分钟可定位（know-how 016 判别法）。伤害不对称 ⇒ 举证责任在激活侧。
 
-| resolver 对信号包的返回 | 判定 | 依据 |
-| --- | --- | --- |
-| 合法 `{url: string}` | **desktop** ⇒ 休眠 | 包存在即桌面宿主 |
-| 抛错 | 包不存在 ⇒ **web 继续** | 组合测试 fake 与真实 v1 loader 契约 |
-| `null` / `undefined` | 包不存在 ⇒ **web 继续** | 同上（compose fake 即返回 null） |
-| `url` 非字符串 | 包不存在 ⇒ **web 继续** | 同上 |
+| # | 判别 | 信号 | 命中判定 |
+| --- | --- | --- | --- |
+| ① | desktop 否决 | `resolveSync(ctx.baseUrl, 'dsh-desktop-host/package.json')` 得合法 `{url: string}`（表达式层内联 + `detectHostProfile()` 镜像） | desktop ⇒ 休眠 |
+| ② | desktop 否决 | 宿主进程 `process.argv` 含 `dsh-desktop-host`（desktop 宿主以 `[execPath, dsh-desktop-host/lib/index.js, <dsh>, <profileDir>, …]` 启动；与官方 dsh-plugin-manager `isPackagedDesktopArgv` 同款 launcher fact） | desktop ⇒ 休眠 |
+| ③ | web 证明 | 宿主二进制 `process.execPath` 基名（大小写归一）∈ {node, node.exe, nodejs, nodejs.exe}——Windows/macOS/Linux web 全形态（systemd/docker/nvm/fnm/volta/mise/直接 node）经解释器 exec 后恒为 node 系二进制；desktop 宿主（Electron run-as-node）恒非 node 系 | 不成立 ⇒ desktop ⇒ 休眠 |
 
-resolver 缺失（`internal`/`resolveSync` 不存在）⇒ 探针 `null`（休眠）。检测异常的 fail-closed 兜底是版本对判定本身：真异常时双锚点同样解析失败 ⇒ `null`。
+判定式：①∨② 命中 或 ③ 不成立 ⇒ desktop（休眠）；全否 ⇒ web，继续版本对判定。resolver 缺失 ⇒ 探针 `null`（休眠）。信号包解析的抛错/空值/怪值 ⇒ 视为不可达，落③（不再单独判 web）。检测异常的 fail-closed 兜底是版本对判定本身：真异常时双锚点同样解析失败 ⇒ `null`。
 
 ### 7.3 fail-closed 语义（双层）
 
 - 探针层（表达式）：desktop ⇒ `GATE_PROFILE_EXPRESSION` 为 `null`（由白名单表条目 `hostProfiles: ['web']` 条件统一拒绝，策略单一来源 `src/compatibility.ts`）⇒ 官方行 enabled、trusted 行 disabled、apply 不运行——安静休眠，与未知版本对同形态（判别法见 know-how 016）。
 - backstop 层（`assertGateBackstop`）：desktop ⇒ fail loud，完整文案 `@iasiv5/dsh-skip-browser-auth: desktop profile not supported; disable or uninstall the plugin (@deepseek-ai/dsh-desktop-host present)`——仅防「patch 激活但不应激活」的绕过态。
 
-### 7.4 残余风险（书面化）
+### 7.4 残余风险与事故记录（书面化）
 
-- desktop 未来若移除/改名信号包 ⇒ 探针误判 web，而 desktop runtime 版本对（如 0.2.0-rc.2）与 web 白名单共享 ⇒ 可能误激活。兜底：任何新 runtime 版本进入白名单前必须走 §5.1 审计流程（届时必然重审 desktop 形态）+ 下述解冻条件。
+- **【事故 2026-10-07，已修复于 0.3.8】**：0.3.6 的 desktop 判别仅依赖信号①；desktop profile 为 hoisted 物化布局、`dsh-desktop-host` 在 app.asar 内自 `ctx.baseUrl` 不可达 ⇒ 误判 web ⇒ 版本对 (0.2.0-rc.2, 0.2.0-rc.2) 命中 v3 ⇒ Replacement 激活 ⇒ "Desktop Host authentication failed" 启动失败（真实 Windows desktop 实机复现；第三方插件禁用后即恢复，因果锁定）。教训：**「包存在于运行时树」≠「自 profile baseUrl 可达」；装机验证曾排在发版后，属流程缺口——0.3.8 起 desktop 实机验证前置为该维度变更的发布门禁**。0.3.8 修复 = 信号②（argv launcher fact）+ 信号③（web 证明），unknown-variant 由③兜底。
+- desktop 未来若移除/改名信号包 ⇒ 信号①失效，但信号②③仍在 ⇒ 仍休眠（0.3.8 起①已非唯一判据）。
+- 对偶风险（web 侧反向污染）：web profile 下第三方插件经 hoisted 抬升携带 `@deepseek-ai/dsh-desktop-host` 依赖 ⇒ 信号①误真 ⇒ 休眠——fail-closed，无安全暴露；本仓库自身不可能引入该包（manifest 不变量 + `tests/manifest.test.mjs` 看护）。 desktop runtime 版本对（如 0.2.0-rc.2）与 web 白名单共享 ⇒ 可能误激活。兜底：任何新 runtime 版本进入白名单前必须走 §5.1 审计流程（届时必然重审 desktop 形态）+ 下述解冻条件。
 - 对称情形（web 侧反向污染）：web profile 下第三方插件经 hoisted 抬升携带 `@deepseek-ai/dsh-desktop-host` 依赖（gate.ts 头注记载的同类抬升遮蔽机制）⇒ 信号误真 ⇒ 本插件安静休眠——方向 fail-closed，最坏损失是本插件不工作，无安全暴露。本仓库自身不可能引入该包：manifest 不变量（红线：dependencies 禁止任何 `@deepseek-ai` 包）+ `tests/manifest.test.mjs` 看护。
 
 ### 7.5 解冻条件（本次不实现）

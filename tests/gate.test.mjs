@@ -506,3 +506,79 @@ test('desktop-host resolving to a non-string url is treated as absent', async (t
   const ctx = interceptDesktop(probeCtx(urls), () => ({ url: 123 }))
   assert.equal(evaluateGate(ctx), true)
 })
+
+test('desktop launcher argv forces the probe dormant even when the package is unreachable', async (t) => {
+  // 2026-10-08 0.3.8 事故修复：desktop profile 为 hoisted 布局，dsh-desktop-host
+  // 只在 app.asar 内、自 ctx.baseUrl 不可达（0.3.6 据此误判 web 并在 desktop 激活）。
+  // 但 desktop 宿主进程 argv 恒带 dsh-desktop-host 入口脚本（官方
+  // isPackagedDesktopArgv 同款 launcher fact）——本用例注入 ctx.process 模拟
+  // Windows 宿主 argv（反斜杠路径），desktop-host 包不注册（= 不可达）。
+  const { urls } = await writeGateFixtures(t)
+  const ctx = probeCtx(urls)
+  ctx.process = {
+    execPath: 'C:\\Program Files\\nodejs\\node.exe',
+    argv: [
+      'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\DeepSeek Harness.exe',
+      'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\resources\\app.asar\\node_modules\\@deepseek-ai\\dsh-desktop-host\\lib\\index.js',
+      'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\resources\\dsh',
+      'C:\\Users\\ies\\.dsh\\profiles\\desktop',
+    ],
+  }
+  assert.equal(evaluateGate(ctx), false)
+  assert.equal(evaluateWith(ctx, GATE_PROFILE_EXPRESSION), null)
+})
+
+test('non-node host binary fails the web proof and stays dormant (default-deny)', async (t) => {
+  // 2026-10-08 融合：激活需要正向 web 证明——宿主二进制基名必须为 node/node.exe。
+  // desktop 变体即便改名启动器（argv 无 dsh-desktop-host），Electron run-as-node
+  // 的 execPath 也非 node ⇒ 休眠（0.3.6 事故形态的 unknown-variant 兜底）。
+  const { urls } = await writeGateFixtures(t)
+  const ctx = probeCtx(urls)
+  ctx.process = {
+    execPath: 'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\DeepSeek Harness.exe',
+    argv: ['C:\\Users\\ies\\.dsh\\profiles\\desktop'],
+  }
+  assert.equal(evaluateGate(ctx), false)
+  assert.equal(evaluateWith(ctx, GATE_PROFILE_EXPRESSION), null)
+})
+
+test('host argv without the desktop launcher stays web (web runtime zero-change guard)', async (t) => {
+  // 不注入 ctx.process：bare process 落回测试运行器全局（argv 无 dsh-desktop-host）。
+  // 显式钉住：web 侧宿主进程 argv 不触发 desktop 判别，行为与 0.3.6 逐字节一致。
+  const { urls } = await writeGateFixtures(t)
+  assert.equal(evaluateGate(probeCtx(urls)), true)
+})
+
+test('web proof accepts node binaries across Windows/macOS/Linux shapes', async (t) => {
+  // 跨平台矩阵（Windows/macOS/Linux × web）：execPath 基名大小写归一后 ∈
+  // {node, node.exe, nodejs, nodejs.exe} ⇒ 正向 web 证明成立，正常激活。
+  const shapes = [
+    ['/usr/bin/node', 'linux systemd/web'],
+    ['/home/u/.nvm/versions/node/v22.19.0/bin/node', 'linux nvm'],
+    ['/opt/homebrew/bin/node', 'macOS homebrew'],
+    ['/usr/local/bin/nodejs', 'linux debian legacy alias'],
+    ['C:\\Program Files\\nodejs\\node.exe', 'windows system'],
+    ['C:\\Users\\ies\\AppData\\Roaming\\nvm\\v22.19.0\\node.exe', 'windows nvm-windows'],
+  ]
+  for (const [execPath, label] of shapes) {
+    const { urls } = await writeGateFixtures(t)
+    const ctx = probeCtx(urls)
+    ctx.process = { execPath, argv: [execPath, '/x/entry.js'] }
+    assert.equal(evaluateGate(ctx), true, `web proof failed for ${label}: ${execPath}`)
+  }
+})
+
+test('desktop execPath binaries across platforms fail the web proof', async (t) => {
+  // desktop 三平台宿主二进制（Electron run-as-node）恒非 node 系 ⇒ 休眠。
+  const shapes = [
+    ['C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\DeepSeek Harness.exe', 'windows'],
+    ['/Applications/DeepSeek.app/Contents/MacOS/DeepSeek Harness', 'macOS'],
+    ['/opt/deepseek-harness/deepseek-harness', 'linux'],
+  ]
+  for (const [execPath, label] of shapes) {
+    const { urls } = await writeGateFixtures(t)
+    const ctx = probeCtx(urls)
+    ctx.process = { execPath, argv: [execPath, '/x/profiles/desktop'] }
+    assert.equal(evaluateGate(ctx), false, `desktop binary not denied for ${label}: ${execPath}`)
+  }
+})

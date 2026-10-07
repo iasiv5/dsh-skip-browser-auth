@@ -38,7 +38,7 @@ sudo systemctl restart deepseek-harness.service   # 按你的部署方式重启 
 - DSH 0.1.5-rc.1 / 0.1.5-rc.2：carrier-neutral-v2
 - DSH 0.1.7-rc.1 / 0.1.7-rc.2 / 0.2.0-rc.1 / 0.2.0-rc.2：carrier-neutral-v3
 其它版本或 runtime/connection 混合版本会自动休眠，不要强行处理。
-desktop profile（存在 dsh-desktop-host 的环境）会自动休眠，这是设计行为，不要强行处理或改代码绕过。
+desktop 宿主一律自动休眠（宿主进程判别，0.3.8 起生效），这是设计行为，不要强行处理或改代码绕过；desktop 用户请直接使用 0.3.8+（0.3.6/0.3.7 在 desktop 有已知缺陷）。
 
 1. 先执行 dsh --version 告诉我当前 DSH 版本，然后照常安装：
    dsh plugin --profile web add @iasiv5/dsh-skip-browser-auth
@@ -101,7 +101,7 @@ runtime=0.1.7-rc.2 + connection=0.1.5-rc.2 → dormant（跨代际混合）
 
 - 组合期版本探针使用 runtime 本体与官方 connection 包双锚点，并返回 profile id；路径段和 npm flat manifest 两种布局均支持。任何异常都 fail-closed 到 dormant。
 - `apply()` backstop 再读取两个 manifest，验证 active profile、patch 传入的 profile id、官方 connection sibling 行的 id/name/disabled/fiber 状态；不满足时在创建服务、注册 route、输出 warning 前 fail loud。
-- 宿主 profile 门控：探针先解析 @deepseek-ai/dsh-desktop-host——命中即 desktop 环境，整体安静休眠（设计行为，desktop 上 Electron 自带 token，插件无收益）；解析异常按 web 继续走版本对判定，任何异常兜底休眠。
+- 宿主 profile 门控（default-deny）：激活需要正向 web 证明——宿主二进制为 node/node.exe；desktop 否决双信号 = 宿主 argv 含 dsh-desktop-host（官方 isPackagedDesktopArgv 同款 launcher fact）∨ @deepseek-ai/dsh-desktop-host 可解析。任一不满足即整体安静休眠（desktop 上 Electron 自带 token，插件无收益；0.3.6 的 desktop 判别缺陷已在 0.3.8 修复，见 docs/COMPATIBILITY.md §7）。
 - `legacy-web-v1` 保留 0.1.2 的 `/api` prefix 与 buffered bridge。
 - `carrier-neutral-v2` 使用 runtime loader 取得当前 0.1.5 connection module，支持 `requestBodyMode`、exact Fetch route 和 streaming body，并将 generic `connection.rpc.handle()` 绑定到拥有 Web carrier 的 replacement context，避免 0.1.5 的 405 回归。
 - `carrier-neutral-v3` 在 v2 契约之上复刻 0.1.7 的三处新语义：`/api` 准入改走 `admit()`（OperatorPeer 作为 RPC handler 第 4 参传入）、共享通道请求经 `connection/request` waterfall（监听插件继续可见）、BrowserAuth stub 使用 mount-preserving URL 语义（token 清理 303 `./`、启动 URL 保留 mount）。
@@ -142,6 +142,8 @@ git diff --exit-code cordis.patch.yml
 - 三个官方 client factory 的 materialization、profile dispatcher 和未知 profile fail-closed
 - rc.2 dormant 基线、dispose/unload、Host/Origin/Fetch Metadata trust fence
 - desktop 宿主 fixture：@deepseek-ai/dsh-desktop-host 桩包在场 + 白名单版本对仍整体休眠（官方行活跃、无插件路由、无横幅）
+- desktop 启动器 argv：宿主进程 argv 含 dsh-desktop-host（app.asar 内信号包不可达的 desktop 形态，0.3.6 事故修复）仍整体休眠；web 宿主 argv 不触发
+- web 证明：宿主二进制非 node（如 Electron run-as-node 的改名启动器）一律休眠；node/node.exe 正常激活
 
 完整的 GitHub API 审计、profile 数据模型、adapter seam、client 变体和未来新增代际 checklist 见 [docs/COMPATIBILITY.md](./docs/COMPATIBILITY.md)；机制详版见 [docs/DESIGN.md](./docs/DESIGN.md)。
 
