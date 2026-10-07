@@ -4,6 +4,13 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.3.10] - 2026-10-08
+
+- **修复 desktop 崩溃的真正根因（客户端半区）**：client dispatcher 在 `__DSH_SKIP_BROWSER_AUTH_PROFILE__` 缺失（休眠）时此前直接 throw，会打断 desktop 宿主的客户端启动链 ⇒ `dsh-desktop-host` 读 `undefined.authenticatedUrl` 启动失败（crash-2026-10-07T17-35 host.log 实证）。现改为休眠静默 no-op（inert namespace，绝不 throw、绝不猜测变体）
+- 0.3.9 的安装槽位判别保留（desktop 槽位 ⇒ 宿主侧休眠，crash log 证实 desktop 宿主为多进程树：Electron main → dsh-desktop-host → loader）
+- web 侧行为零变化：web 激活路径不变；web 休眠时（未知版本对）client bundle 也不再抛错，官方 client 照常工作
+- desktop 实机复核清单：docs/DESKTOP-DORMANT-CHECKLIST.md（正常启动、无横幅、401×2）
+
 ## [0.3.9] - 2026-10-08
 
 - 修复：desktop 判别新增**安装槽位信号**（`ctx.baseUrl` 目录基名 === `desktop` ⇒ 休眠）——crash log（`crash-2026-10-07T17-11-31-064Z-host.log`）证实 desktop 宿主为多进程树（Electron main → dsh-desktop-host → 纯 node 子进程跑 loader），0.3.8 的 argv/execPath 信号瞄错进程层仍误判 web；槽位为官方 `desktopProfileDirFromArgv` 契约（desktop 客户端恒用 `profiles/desktop` 槽位），与进程树形状无关
@@ -87,7 +94,8 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.9...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.10...HEAD
+[0.3.10]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.9...v0.3.10
 [0.3.9]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.6...v0.3.8
 [0.3.6]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.5...v0.3.6

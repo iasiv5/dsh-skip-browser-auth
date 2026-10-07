@@ -69,15 +69,34 @@ test('dispatcher materializes the 0.1.2, 0.1.5 and 0.1.7 client variants by expl
   }
 })
 
-test('dispatcher rejects missing or unknown profile instead of guessing a client variant', () => {
-  const sandbox = {
+test('dispatcher no-ops for missing or unknown profile instead of guessing a client variant', () => {
+  // 0.3.10 desktop 事故修复：休眠时宿主仍注入 client bundle 且不注入 profile global，
+  // dispatcher 此前 throw 会打断客户端启动链并炸宿主（crash-2026-10-07T17-35 host.log）。
+  // 休眠语义 = 客户端静默 no-op（inert namespace，绝不猜测变体、绝不 throw）。
+  const inert = (call) => {
+    const result = call()
+    // vm realm 的对象原型与宿主不同，禁用 deepEqual；按键集合 + 形状断言惰性命名空间
+    assert.deepEqual(Object.keys(result).sort(), ['apply', 'inject'])
+    assert.equal(Array.isArray(result.inject), true)
+    assert.equal(result.inject.length, 0)
+    assert.equal(typeof result.apply, 'function')
+    return result
+  }
+  const missing = {
     console,
-    window: { __ModuleLoader__: { load: (registration) => { sandbox.registration = registration } } },
+    window: { __ModuleLoader__: { load: (registration) => { missing.registration = registration } } },
     globalThis: null,
   }
-  sandbox.globalThis = sandbox
-  vm.runInNewContext(dispatcherSource, sandbox, { filename: 'lib/client.js' })
-  assert.throws(() => sandbox.registration.factory(stubRequire), /missing or unknown compatibility profile/)
-  sandbox.__DSH_SKIP_BROWSER_AUTH_PROFILE__ = 'unknown-profile'
-  assert.throws(() => sandbox.registration.factory(stubRequire), /missing or unknown compatibility profile/)
+  missing.globalThis = missing
+  vm.runInNewContext(dispatcherSource, missing, { filename: 'lib/client.js' })
+  inert(() => missing.registration.factory(stubRequire))
+  const unknown = {
+    console,
+    __DSH_SKIP_BROWSER_AUTH_PROFILE__: 'unknown-profile',
+    window: { __ModuleLoader__: { load: (registration) => { unknown.registration = registration } } },
+    globalThis: null,
+  }
+  unknown.globalThis = unknown
+  vm.runInNewContext(dispatcherSource, unknown, { filename: 'lib/client.js' })
+  inert(() => unknown.registration.factory(stubRequire))
 })

@@ -64,7 +64,7 @@ const factoryBlocks = extracted.map((variant) => [
   '    }',
 ].join('\n')).join('\n')
 
-const output = `window.__ModuleLoader__.load({\n\tid: ${JSON.stringify(PLUGIN_ID)},\n\tfactory: (require) => {\n\t\tconst profile = globalThis[${JSON.stringify(PROFILE_GLOBAL)}];\n${factoryBlocks}\n\t\tthrow new Error(${JSON.stringify(`${PLUGIN_ID}: missing or unknown compatibility profile in ${PROFILE_GLOBAL}`)} + \": \" + String(profile));\n\t}\n});\n`
+const output = `window.__ModuleLoader__.load({\n\tid: ${JSON.stringify(PLUGIN_ID)},\n\tfactory: (require) => {\n\t\tconst profile = globalThis[${JSON.stringify(PROFILE_GLOBAL)}];\n${factoryBlocks}\n\t\t// dormant（desktop/未知 pair）：客户端静默 no-op，绝不 throw——休眠时宿主仍注入\n\t\t// client bundle，global 缺失，throw 会打断客户端启动链并炸宿主（0.3.9 desktop 事故）。\n\t\treturn { inject: [], apply: () => {} };\n\t}\n});\n`
 
 const libDir = join(root, 'lib')
 mkdirSync(libDir, { recursive: true })

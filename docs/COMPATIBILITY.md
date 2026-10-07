@@ -370,10 +370,15 @@ desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版�
 
 ### 7.4 残余风险与事故记录（书面化）
 
-- **【事故 2026-10-07/08，已修复于 0.3.9】**：desktop 宿主为多进程树（crash log 实证：Electron main → ChildProcess → dsh-desktop-host → 纯 node 子进程跑 loader）。0.3.6 仅凭信号①（desktop-host 包在 app.asar 内、hoisted 布局下不可达）误判 web ⇒ 激活 ⇒ "Desktop Host authentication failed"；0.3.8 增补信号②③但瞄错进程层（argv 无 dsh-desktop-host、execPath=node 的 loader 子进程）⇒ 仍激活 ⇒ 宿主读 replacement 缺失的 `authenticatedUrl` 面 ⇒ `undefined.authenticatedUrl`（crash-2026-10-07T17-11-31-064Z-host.log 实证）。0.3.9 增补信号②′（安装槽位，进程树形状无关）收口。教训：**跨进程架构的判别信号必须以真实宿主的进程树取证为准；desktop 实机验证前置为该维度变更的发布门禁（0.3.9 起执行）**。
-- desktop 未来若移除/改名信号包 ⇒ 信号①失效，但信号②③仍在 ⇒ 仍休眠（0.3.8 起①已非唯一判据）。
-- 对偶风险（web 侧反向污染）：web profile 下第三方插件经 hoisted 抬升携带 `@deepseek-ai/dsh-desktop-host` 依赖 ⇒ 信号①误真 ⇒ 休眠——fail-closed，无安全暴露；本仓库自身不可能引入该包（manifest 不变量 + `tests/manifest.test.mjs` 看护）。 desktop runtime 版本对（如 0.2.0-rc.2）与 web 白名单共享 ⇒ 可能误激活。兜底：任何新 runtime 版本进入白名单前必须走 §5.1 审计流程（届时必然重审 desktop 形态）+ 下述解冻条件。
-- 对称情形（web 侧反向污染）：web profile 下第三方插件经 hoisted 抬升携带 `@deepseek-ai/dsh-desktop-host` 依赖（gate.ts 头注记载的同类抬升遮蔽机制）⇒ 信号误真 ⇒ 本插件安静休眠——方向 fail-closed，最坏损失是本插件不工作，无安全暴露。本仓库自身不可能引入该包：manifest 不变量（红线：dependencies 禁止任何 `@deepseek-ai` 包）+ `tests/manifest.test.mjs` 看护。
+- **【事故 2026-10-07/08，两阶段缺陷，已修复于 0.3.10；探针/crash log 实证 2026-10-08】**
+  - 宿主架构（探针实证）：desktop 宿主为多进程树——Electron main → ChildProcess（dsh-desktop-host/lib/index.js，**loader 与插件在此进程内**，Electron run-as-node，node 24.18.1）；信号①的 desktop-host 包在 app.asar 内、自 profile baseUrl **不可达**（THROW: Cannot find package）；信号②（argv[1] 恒含 dsh-desktop-host）、信号②′（baseUrl 槽位=desktop）、信号③（execPath 为 Electron exe 非 node）在该进程**全部成立**。
+  - ① 0.3.6：仅凭信号①误判 web ⇒ 激活 ⇒ "Desktop Host authentication failed"。
+  - ② 0.3.8/0.3.9：宿主侧判别已正确休眠，但**客户端半区**漏修——休眠时宿主仍注入 client bundle 且不注入 profile global，client dispatcher 读缺失 global 直接 throw ⇒ 客户端启动链断裂 ⇒ dsh-desktop-host 读 `undefined.authenticatedUrl`（crash-2026-10-07T17-11-31 / 17-35-15 host.log 实证，两版签名一致）。
+  - **0.3.10 修复 = 客户端 dispatcher 休眠静默 no-op（绝不 throw、绝不猜测变体）**；宿主侧三信号 + 槽位判别保留。
+  - 教训：**休眠必须全链路静默（宿主行、客户端 bundle、配置表达式），任何半区的 throw 都可能炸宿主；desktop 实机验证前置为该维度变更的发布门禁（0.3.10 起执行）**。
+- desktop 未来若移除/改名信号包 ⇒ 信号①失效，但②②′③仍在 ⇒ 仍休眠（①自 0.3.8 起已非唯一判据）。
+- 对偶风险（web 侧反向污染）：web profile 下第三方插件经 hoisted 抬升携带 `@deepseek-ai/dsh-desktop-host` 依赖（gate.ts 头注记载的同类抬升遮蔽机制）⇒ 信号①误真 ⇒ 本插件安静休眠——方向 fail-closed，最坏损失是本插件不工作，无安全暴露；且信号③（web 宿主为 node 二进制）不受抬升影响，仍为独立兜底。本仓库自身不可能引入该包：manifest 不变量（红线：dependencies 禁止任何 `@deepseek-ai` 包）+ `tests/manifest.test.mjs` 看护。
+- desktop runtime 版本对（如 0.2.0-rc.2）与 web 白名单共享 ⇒ 判别信号失效时存在误激活暴露。兜底：任何新 runtime 版本进入白名单前必须走 §5.1 审计流程（届时必然重审 desktop 形态）+ 下述解冻条件。
 
 ### 7.5 解冻条件（本次不实现）
 
