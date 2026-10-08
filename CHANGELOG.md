@@ -4,6 +4,13 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.3.11] - 2026-10-08
+
+- **修复 desktop 判别的真正根因（控制流缺陷）**：desktop 的 resolver 对 `dsh-desktop-host` 是 **throw**（真机探针实证："Cannot find package…"），而 web 机返回 null——0.3.8-0.3.10 的判别表达式把四个信号放在**同一个共享 try** 里，信号①的 throw 会直接跳到 catch 并落 `'web'`，**跳过 argv/槽位/execPath 全部后续信号** ⇒ 在 desktop 误激活 ⇒ 官方 connection 行被禁用 + backstop fail-loud 使行回滚 ⇒ connection 服务缺失 ⇒ `dsh-desktop-host` 读 `undefined.authenticatedUrl` 启动失败
+- 修复 = 每个信号独立 try/catch（任一信号失败/抛错不再影响其余信号），default-deny 语义不变；新增真机形态回归测试（resolver throw + 宿主 argv + desktop 槽位 + Electron execPath + 白名单 pair ⇒ 必须休眠）
+- web 侧行为零变化（web resolver 返回 null，判别路径与 0.3.10 一致）；兼容版本对不变
+- desktop 实机复核清单：docs/DESKTOP-DORMANT-CHECKLIST.md
+
 ## [0.3.10] - 2026-10-08
 
 - **修复 desktop 崩溃的真正根因（客户端半区）**：client dispatcher 在 `__DSH_SKIP_BROWSER_AUTH_PROFILE__` 缺失（休眠）时此前直接 throw，会打断 desktop 宿主的客户端启动链 ⇒ `dsh-desktop-host` 读 `undefined.authenticatedUrl` 启动失败（crash-2026-10-07T17-35 host.log 实证）。现改为休眠静默 no-op（inert namespace，绝不 throw、绝不猜测变体）
@@ -94,7 +101,8 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.10...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.11...HEAD
+[0.3.11]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.10...v0.3.11
 [0.3.10]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.9...v0.3.10
 [0.3.9]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.6...v0.3.8

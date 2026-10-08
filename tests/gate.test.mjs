@@ -609,3 +609,50 @@ test('web and headless slots keep activating with a node host (slot matrix)', as
     assert.equal(evaluateGate(ctx), true, `slot ${base} must stay active with a node host`)
   }
 })
+
+test('desktop resolver THROWING on the desktop-host specifier stays dormant (0.3.8-0.3.10 incident regression)', async (t) => {
+  // 2026-10-08 真机实证（gate-probe ENV）：desktop 的 resolver 对 dsh-desktop-host
+  // 抛 "Cannot find package"（web 机返回 null）——0.3.8-0.3.10 的共享 try 结构下，
+  // 信号①的 throw 直接跳到 catch 并落 'web'，跳过信号②②′③ ⇒ desktop 误激活。
+  // 本用例完整复刻真机形态：resolver 对 desktop-host 抛错 + 宿主 argv 恒带
+  // dsh-desktop-host + desktop 槽位 + Electron execPath + 白名单 pair (0.2.0-rc.2)。
+  const { urls } = await writeGateFixtures(t, { runtimeVersion: '0.2.0-rc.2', connectionVersion: '0.2.0-rc.2' })
+  const ctx = probeCtx(urls)
+  ctx.baseUrl = 'file:///C:/Users/ies/.dsh/profiles/desktop/'
+  ctx.process = {
+    execPath: 'C:\\Users\\ies\\AppData\\Local\\Programs\\DeepSeek Harness\\DeepSeek Harness.exe',
+    argv: [
+      'C:\\Users\\ies\\AppData\\Local\\Programs\\DeepSeek Harness\\DeepSeek Harness.exe',
+      'C:\\Users\\ies\\AppData\\Local\\Programs\\DeepSeek Harness\\resources\\app.asar\\dsh\\node_modules\\@deepseek-ai\\dsh-desktop-host\\lib\\index.js',
+      'C:\\Users\\ies\\AppData\\Local\\Programs\\DeepSeek Harness\\resources\\app.asar\\dsh',
+      'C:\\Users\\ies\\.dsh\\profiles\\desktop',
+    ],
+  }
+  ctx.loader.internal.resolveSync = (base, request) => {
+    const specifier = typeof request === 'string' ? request : request.specifier
+    if (specifier === '@deepseek-ai/dsh-desktop-host/package.json') {
+      throw new Error("Cannot find package '@deepseek-ai/dsh-desktop-host' imported from 'C:\\Users\\ies\\.dsh\\profiles\\desktop\\'")
+    }
+    if (specifier === '@deepseek-ai/dsh/package.json') return { url: urls['@deepseek-ai/dsh/package.json'] }
+    if (specifier === '@deepseek-ai/dsh-client-connection/package.json') return { url: urls['@deepseek-ai/dsh-client-connection/package.json'] }
+    return null
+  }
+  assert.equal(evaluateGate(ctx), false)
+  assert.equal(evaluateWith(ctx, GATE_PROFILE_EXPRESSION), null)
+})
+
+test('signal isolation: each desktop signal failing or throwing leaves the others decisive', async (t) => {
+  // argv 无标记 + 槽位非 desktop + desktop-host 抛错，但 execPath 非 node
+  // ⇒ 信号③（default-deny）独立生效 ⇒ 休眠。
+  const { urls } = await writeGateFixtures(t)
+  const ctx = probeCtx(urls)
+  ctx.baseUrl = 'file:///home/u/.dsh/profiles/web/'
+  ctx.process = { execPath: '/opt/deepseek-harness/deepseek-harness', argv: ['/opt/deepseek-harness/deepseek-harness', '/x/entry.js'] }
+  const base = ctx.loader.internal.resolveSync.bind(ctx.loader.internal)
+  ctx.loader.internal.resolveSync = (...args) => {
+    const specifier = typeof args[1] === 'object' ? args[1].specifier : args[0]
+    if (specifier === '@deepseek-ai/dsh-desktop-host/package.json') throw new Error('boom')
+    return base(...args)
+  }
+  assert.equal(evaluateGate(ctx), false)
+})

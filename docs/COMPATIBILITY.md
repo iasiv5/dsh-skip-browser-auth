@@ -356,12 +356,12 @@ desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版�
 
 | # | 判别 | 信号 | 命中判定 |
 | --- | --- | --- | --- |
-| ① | desktop 否决 | `resolveSync(ctx.baseUrl, 'dsh-desktop-host/package.json')` 得合法 `{url: string}`（表达式层内联 + `detectHostProfile()` 镜像） | desktop ⇒ 休眠 |
+| ① | desktop 否决 | `resolveSync(ctx.baseUrl, 'dsh-desktop-host/package.json')` 得合法 `{url: string}`（表达式层内联 + `detectHostProfile()` 镜像）。**注意平台差异**：该包不可达时，web 机 resolver 返回 null，desktop 机 resolver **抛错**（真机探针实证）——两平台都要落到「非 desktop」分支 | desktop ⇒ 休眠 |
 | ② | desktop 否决 | 宿主进程 `process.argv` 含 `dsh-desktop-host`（desktop 宿主以 `[execPath, dsh-desktop-host/lib/index.js, <dsh>, <profileDir>, …]` 启动；与官方 dsh-plugin-manager `isPackagedDesktopArgv` 同款 launcher fact） | desktop ⇒ 休眠 |
 | ②′ | desktop 否决 | `ctx.baseUrl` 目录基名（大小写归一）=== `desktop`——desktop 客户端恒以 profiles/desktop 槽位启动 loader（官方 `desktopProfileDirFromArgv` 契约），**进程树形状无关**（0.3.8 事故形态：宿主以纯 node 子进程跑 loader，argv/execPath 双双落空） | desktop ⇒ 休眠 |
 | ③ | web 证明 | 宿主二进制 `process.execPath` 基名（大小写归一）∈ {node, node.exe, nodejs, nodejs.exe}——Windows/macOS/Linux web 全形态（systemd/docker/nvm/fnm/volta/mise/直接 node）经解释器 exec 后恒为 node 系二进制；desktop 宿主（Electron run-as-node）恒非 node 系 | 不成立 ⇒ desktop ⇒ 休眠 |
 
-判定式：①∨② 命中 或 ③ 不成立 ⇒ desktop（休眠）；全否 ⇒ web，继续版本对判定。resolver 缺失 ⇒ 探针 `null`（休眠）。信号包解析的抛错/空值/怪值 ⇒ 视为不可达，落③（不再单独判 web）。检测异常的 fail-closed 兜底是版本对判定本身：真异常时双锚点同样解析失败 ⇒ `null`。
+判定式：①∨②′∨② 命中 或 ③ 不成立 ⇒ desktop（休眠）；全否 ⇒ web，继续版本对判定。**实现纪律（0.3.11 事故教训）：每个信号必须独立 try/catch——信号①在 desktop 上的 throw 绝不允许跳过其余信号**。resolver 缺失 ⇒ 探针 `null`（休眠）。检测异常的 fail-closed 兜底是版本对判定本身：真异常时双锚点同样解析失败 ⇒ `null`。
 
 ### 7.3 fail-closed 语义（双层）
 

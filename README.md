@@ -38,7 +38,7 @@ sudo systemctl restart deepseek-harness.service   # 按你的部署方式重启 
 - DSH 0.1.5-rc.1 / 0.1.5-rc.2：carrier-neutral-v2
 - DSH 0.1.7-rc.1 / 0.1.7-rc.2 / 0.2.0-rc.1 / 0.2.0-rc.2：carrier-neutral-v3
 其它版本或 runtime/connection 混合版本会自动休眠，不要强行处理。
-desktop 宿主一律自动休眠（多进程树判别：安装槽位/启动器 argv/宿主二进制，0.3.9 起生效），这是设计行为，不要强行处理或改代码绕过；desktop 用户请直接使用 0.3.10+（0.3.6-0.3.9 在 desktop 有已知缺陷，见 docs/COMPATIBILITY.md §7.4）。
+desktop 宿主一律自动休眠（多进程树判别：安装槽位/启动器 argv/宿主二进制，0.3.9 起生效），这是设计行为，不要强行处理或改代码绕过；desktop 用户请直接使用 0.3.11+（0.3.6-0.3.10 在 desktop 有已知缺陷，见 docs/COMPATIBILITY.md §7.4）。
 
 1. 先执行 dsh --version 告诉我当前 DSH 版本，然后照常安装：
    dsh plugin --profile web add @iasiv5/dsh-skip-browser-auth
