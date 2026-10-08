@@ -398,4 +398,4 @@ desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版�
 ### 7.7 实机状态（发版后回填）
 
 - web 0.2.0-rc.2 升级零回归断言（历版全过）：0.3.6（2026-10-07 22:44）、0.3.8（2026-10-08 01:41）、0.3.9（01:41 修复版）、0.3.10（02:23）、0.3.11（10:23:24 重启后横幅逐字输出、无 token `GET /` 200、伪造 Host 403、`/?token=x` 303 `location: ./`）；web profile 预检 `grep -c "dsh-desktop-host$"` = 0。
-- desktop dormant 基线断言（0.3.11）：待执行——主人在 Windows 机按 `docs/DESKTOP-DORMANT-CHECKLIST.md` 安装 0.3.11 后执行（预期：正常启动、无横幅、无 token 401×2）；0.3.6-0.3.10 在 desktop 均无法启动（§7.4 事故），验证前请保持禁用/卸载。
+- desktop dormant 基线断言（0.3.11）：**已通过（2026-10-08，Windows 实机）**——安装 0.3.11 后 Desktop 正常启动（不再崩溃）、无 "BrowserAuth has been skipped" 横幅、休眠态无 token 访问 401×2 符合预期、GUI 与 agent 会话正常。0.3.6-0.3.10 在 desktop 均无法启动（§7.4 事故），desktop 用户请使用 0.3.11+。
