@@ -11,6 +11,7 @@
 - 语义对齐：0.3.10 已把客户端半区改为休眠静默 no-op，本版把宿主半区 desktop 分支对齐同一哲学；§7.4 教训（任何半区的 throw 都可能炸宿主）由「desktop 可达的残余 throw」收敛为「仅 web 契约破坏时 throw」
 - **web 侧行为零变化**：desktop 分支在 web 不可达（槽位/argv/execPath 组合信号）；锚点解析失败、版本对不在白名单、profile mismatch、binding violated 四类 fail loud 全保留；兼容 DSH 版本对不变
 - desktop 实机 checklist 前置门禁照旧执行，并新增断言：pin 态下 dsh-m 开关任意插件零报错横幅；四类历史崩溃模式逐条预演零回归（docs/COMPATIBILITY.md §7.8）
+- 测试基建 Windows 可移植修复（helper/脚本层，产品代码零变更）：fixture 脚本 `spawnSync npm`（ENOENT→EINVAL，改 `node npm-cli.js` 直启）、compose 行清单 `{{ROOT}}` 替换改为对象树递归 + `resolve()` 归一（JSON 非法转义 + 混合分隔符触发 frontend-static 路径守卫误报 403 两处）——组合套件自此 Windows 全绿（169 跑 168 过 0 fail 1 skip），web 全白名单 pair 激活/休眠路径本地可证
 
 ## [0.3.11] - 2026-10-08
 

@@ -5,7 +5,7 @@
 import http from 'node:http'
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import yaml from 'js-yaml'
@@ -100,8 +100,15 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
   // 行清单 yml：{{ROOT}} 占位替换为临时根目录。替换在解析后的对象树上递归做，
   // 不在 JSON 字符串上做——Windows 根路径的反斜杠拼进 JSON 字符串会产生非法
   // 转义（Bad escaped character），Linux 正斜杠路径则从不暴露该缺陷。
+  // 替换后经 resolve() 归一为本机分隔符：{{ROOT}}（反斜杠根）+ 行内手写的
+  // '/dist/index.html' 会产生混合分隔符，path.win32 的 dirname 会保留末尾
+  // 正斜杠，frontend-static 的路径逃逸守卫（严格字符串比较）随即对一切请求
+  // 误报 403（authorizeIndex 不被咨询）——Linux 全正斜杠从不暴露。
   const substituteRoot = (value) => {
-    if (typeof value === 'string') return value.replaceAll('{{ROOT}}', root)
+    if (typeof value === 'string') {
+      if (!value.includes('{{ROOT}}')) return value
+      return resolve(value.replaceAll('{{ROOT}}', root))
+    }
     if (Array.isArray(value)) return value.map(substituteRoot)
     if (value !== null && typeof value === 'object') {
       return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, substituteRoot(item)]))
