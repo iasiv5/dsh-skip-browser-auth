@@ -12,7 +12,17 @@ const before = new Map(trackedFiles.map((file) => [file, readFileSync(join(root,
 const childEnv = { ...process.env }
 for (const key of ['npm_config_allow_scripts', 'NPM_CONFIG_ALLOW_SCRIPTS']) delete childEnv[key]
 
-execFileSync('npm', [
+// 跨平台 npm 调用：Windows 上 spawnSync 禁止直接起 .cmd（CVE-2024-27980，EINVAL），
+// 改为 node <npm-cli.js> 直启（npm-cli.js 恒在 <node 目录>/node_modules/npm/bin/）。
+function runNpm(args, opts) {
+  if (process.platform === 'win32') {
+    const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+    return execFileSync(process.execPath, [npmCli, ...args], opts)
+  }
+  return execFileSync('npm', args, opts)
+}
+
+runNpm([
   'install',
   '--no-save',
   '--package-lock=false',

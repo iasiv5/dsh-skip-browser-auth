@@ -366,7 +366,7 @@ desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版�
 ### 7.3 fail-closed 语义（双层）
 
 - 探针层（表达式）：desktop ⇒ `GATE_PROFILE_EXPRESSION` 为 `null`（由白名单表条目 `hostProfiles: ['web']` 条件统一拒绝，策略单一来源 `src/compatibility.ts`）⇒ 官方行 enabled、trusted 行 disabled、apply 不运行——安静休眠，与未知版本对同形态（判别法见 know-how 016）。
-- backstop 层（`assertGateBackstop`）：desktop ⇒ fail loud，完整文案 `@iasiv5/dsh-skip-browser-auth: desktop profile not supported; disable or uninstall the plugin (@deepseek-ai/dsh-desktop-host present)`——仅防「patch 激活但不应激活」的绕过态。
+- backstop 层（`assertGateBackstop`）：desktop ⇒ fail loud，完整文案 `@iasiv5/dsh-skip-browser-auth: desktop profile not supported; disable or uninstall the plugin (@deepseek-ai/dsh-desktop-host present)`——仅防「patch 激活但不应激活」的绕过态。**0.3.12 起本分支由 apply 前置判别承接（desktop ⇒ 静默休眠 no-op，见 §7.8），正常不可达，保留为纵深防御**。
 
 ### 7.4 残余风险与事故记录（书面化）
 
@@ -377,6 +377,7 @@ desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版�
   - **0.3.10 修复 = 客户端 dispatcher 休眠静默 no-op（绝不 throw、绝不猜测变体）**；宿主侧三信号 + 槽位判别保留。
   - 教训：**休眠必须全链路静默（宿主行、客户端 bundle、配置表达式），任何半区的 throw 都可能炸宿主；desktop 实机验证前置为该维度变更的发布门禁（0.3.10 起执行）**。
 - desktop 未来若移除/改名信号包 ⇒ 信号①失效，但②②′③仍在 ⇒ 仍休眠（①自 0.3.8 起已非唯一判据）。
+- **【事件 2026-10-11，非崩溃、报错风暴，收编于 0.3.12（§7.8）】**：desktop 上用户层 patch 按行 id 写 `- id: trusted-connection  disabled: false`（dsh-m 插件开关 / `dsh plugin add` enable 通道的标准产物，2026-10-11 Windows 实机实录）合法覆盖自门控 `!!js` disabled 表达式 ⇒ 行强制 active、apply 被调 ⇒ 0.3.11 及以前 backstop fail loud，且每次任意插件开关触发热重载都弹 `desktop profile not supported`。教训：**组合期门控可被用户层合法覆盖，不承担语义；apply 内判定才是权威**；良态强制启用必须静默休眠而非报错。
 - 对偶风险（web 侧反向污染）：web profile 下第三方插件经 hoisted 抬升携带 `@deepseek-ai/dsh-desktop-host` 依赖（gate.ts 头注记载的同类抬升遮蔽机制）⇒ 信号①误真 ⇒ 本插件安静休眠——方向 fail-closed，最坏损失是本插件不工作，无安全暴露；且信号③（web 宿主为 node 二进制）不受抬升影响，仍为独立兜底。本仓库自身不可能引入该包：manifest 不变量（红线：dependencies 禁止任何 `@deepseek-ai` 包）+ `tests/manifest.test.mjs` 看护。
 - desktop runtime 版本对（如 0.2.0-rc.2）与 web 白名单共享 ⇒ 判别信号失效时存在误激活暴露。兜底：任何新 runtime 版本进入白名单前必须走 §5.1 审计流程（届时必然重审 desktop 形态）+ 下述解冻条件。
 
@@ -399,3 +400,11 @@ desktop 上 Electron 启动自带 token ⇒ 插件收益趋零；desktop 无版�
 
 - web 0.2.0-rc.2 升级零回归断言（历版全过）：0.3.6（2026-10-07 22:44）、0.3.8（2026-10-08 01:41）、0.3.9（01:41 修复版）、0.3.10（02:23）、0.3.11（10:23:24 重启后横幅逐字输出、无 token `GET /` 200、伪造 Host 403、`/?token=x` 303 `location: ./`）；web profile 预检 `grep -c "dsh-desktop-host$"` = 0。
 - desktop dormant 基线断言（0.3.11）：**已通过（2026-10-08，Windows 实机）**——安装 0.3.11 后 Desktop 正常启动（不再崩溃）、无 "BrowserAuth has been skipped" 横幅、休眠态无 token 访问 401×2 符合预期、GUI 与 agent 会话正常。0.3.6-0.3.10 在 desktop 均无法启动（§7.4 事故），desktop 用户请使用 0.3.11+。
+
+### 7.8 运行时权威休眠（0.3.12，用户层 pin 覆盖收编）
+
+- **分层语义**：组合期 `!!js` 表达式 = 优化（避免无谓 apply；可被用户层 id-pin 合法覆盖——dsh-m 开关 / `dsh plugin add` enable 通道的标准产物，见 §7.4 事件 2026-10-11——因此不承担语义）；**apply 内宿主判别 = 唯一权威**。
+- **apply 结构（0.3.12）**：① 最前置 `detectHostProfile()`（resolver 允许 undefined，信号①自行消化；槽位/argv/execPath 信号不依赖 resolver）——desktop ⇒ 固定文案 `desktop host detected — dormant by design (web-only plugin); official connection untouched. Safe to uninstall.` + return（零 throw、零配置校验、零副作用）；② web 路径照旧：配置校验 → backstop 四类契约破坏 fail loud。backstop 内的 desktop throw 保留为纵深防御（正常不可达）。
+- **不变量**：desktop 激活三关不减（镜像判 web ∧ 白名单 pair ∧ binding 完好）；官方 connection 行表达式、client 半区（0.3.10 inert no-op）、web 全路径零改动；新增路径仅纯函数判定 + 一行 `console.warn`，无文件/网络/服务操作。
+- **§7.4 四类历史模式预演（2026-10-11 会话留档）**：①2026-09-10 apply-throw 崩溃循环——desktop 分支零 throw，不回归；②0.3.6 组合期误判——激活三关未减，镜像判对时 no-op 优于 throw（throw→行失败→官方行若已被误禁→connection 缺失，两版同等，0.3.12 不恶化）；③0.3.8/0.3.9 client 半区——0.3.10 已修，pinned 态不注入 global ⇒ client 走同一 inert 路径，与实机 PASS 的休眠基线运行时同态；④0.3.11 信号控制流——不触碰 `detectHostProfile`/表达式，每信号独立 try/catch 原样。
+- **desktop 实机 checklist 新增断言（0.3.12 起）**：pin 态（`disabled: false` 在用户层在场）下 dsh-m 开关任意插件零报错横幅、日志恰一行 dormant 通知、Desktop 正常启动。

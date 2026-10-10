@@ -41,6 +41,8 @@ export const inject = ['webServer']
 
 /** 启动警告固定文案（全局约束：Replacement 激活时逐字输出）。 */
 const SKIP_WARNING = '@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.'
+/** desktop 休眠通知固定文案（0.3.12 起 apply 前置判别休眠时逐字输出；可 grep）。 */
+const DESKTOP_DORMANT_NOTICE = '@iasiv5/dsh-skip-browser-auth: desktop host detected — dormant by design (web-only plugin); official connection untouched. Safe to uninstall.'
 
 /** Headroom for RPC JSON fields around aggregate base64 image payloads. */
 const REQUEST_ENVELOPE_HEADROOM_BYTES = 1024 * 1024
@@ -90,8 +92,9 @@ function profileById(value: unknown): CompatibilityProfile | undefined {
 
 /**
  * direct（无 loader/fiber entry）上下文的 profile 兜底：仅纯单测/dev 树可达。
- * 宿主形态按 'web' 处理（dev 树即 web）——desktop 判定需要 resolver，真 desktop
- * 上必然先经过 assertGateBackstop 的镜像检测 fail loud，不会走到这里。
+ * 宿主形态按 'web' 处理（dev 树即 web）——apply 的前置宿主判别（0.3.12）凭
+ * 槽位/argv/execPath 信号即可判 desktop，真 desktop 上必然先静默休眠，不会走到
+ * 这里；resolver 缺失不影响该判别（信号①自行消化 undefined）。
  */
 function directProfile(requestedProfile: unknown): CompatibilityProfile {
   if (requestedProfile !== undefined) {
@@ -114,6 +117,11 @@ function directProfile(requestedProfile: unknown): CompatibilityProfile {
  * 产品组合中 loader / internal / current 任一缺失都意味着最后防线无法执行，
  * 必须在创建 Connection 服务与注册 /api 之前 fail loud。没有 loader 与 entry
  * 的直接单元测试上下文才跳过本 backstop。
+ *
+ * 0.3.12 起 desktop 分支由 apply 的前置宿主判别承接（静默休眠，见 apply），
+ * 本函数内的 desktop throw 正常不可达，保留为纵深防御（防未来调用路径回退）；
+ * 本 backstop 实际只在 web 路径运行，四类契约破坏（锚点解析失败、版本对不在
+ * 白名单、profile mismatch、binding violated）照旧 fail loud。
  */
 function assertGateBackstop(ctx: Context, requestedProfile?: string): CompatibilityProfile | undefined {
   const loader = (ctx.get as (name: string) => unknown)('loader') as { internal?: LoaderInternalLike } | undefined
@@ -132,8 +140,9 @@ function assertGateBackstop(ctx: Context, requestedProfile?: string): Compatibil
   const baseUrl = (ctx as { baseUrl?: string }).baseUrl ?? ''
   const internal = loader.internal
   // 宿主 profile 镜像检测（2026-10-07 web-only 门控，纵深防御层）：desktop 信号在
-  // 场 ⇒ fail loud。正常流程第①道探针已休眠、apply 不会被调；此层只防「patch 激活
-  // 但不应激活」。语义与 detectHostProfile/表达式层一致（docs/COMPATIBILITY.md §7）。
+  // 场 ⇒ fail loud。0.3.12 起 apply 的前置判别已在 desktop 上静默休眠返回，此分支
+  // 正常不可达，保留为纵深防御（防未来重排序/调用路径回退）。语义与
+  // detectHostProfile/表达式层一致（docs/COMPATIBILITY.md §7/§7.8）。
   const hostProfile = detectHostProfile(internal, baseUrl)
   if (hostProfile === 'desktop') {
     throw new Error(`@iasiv5/dsh-skip-browser-auth: desktop profile not supported; disable or uninstall the plugin (${DESKTOP_HOST_PACKAGE} present)`)
@@ -224,6 +233,20 @@ function createHostRuntime(profile: CompatibilityProfile, input: Parameters<type
  * identity layer exists beyond it.
  */
 export async function apply(ctx: Context, config?: TrustedConnectionConfig): Promise<void> {
+  // 宿主形态判别最前置（0.3.12，运行时权威休眠）：desktop ⇒ 静默休眠，无条件
+  // 先于一切配置校验与副作用。背景：用户层 patch 可按行 id 合法覆盖本插件
+  // patch 的 !!js disabled 表达式（dsh-m 插件开关 / `dsh plugin add` enable
+  // 通道的标准产物，2026-10-11 实录），组合期门控因此不承担语义；apply 内判定
+  // 是唯一权威。§7.4 教训（任何半区的 throw 都可能炸宿主）：休眠路径零 throw、
+  // 零副作用，仅留一行可 grep 的通知；「激活需要正向 web 证明」的 default-deny
+  // 语义不变。resolver 缺失不阻碍判别（信号①自行消化 undefined）。
+  const earlyLoader = (ctx.get as (name: string) => unknown)('loader') as { internal?: LoaderInternalLike } | undefined
+  const earlyBaseUrl = (ctx as { baseUrl?: string }).baseUrl ?? ''
+  if (detectHostProfile(earlyLoader?.internal, earlyBaseUrl) === 'desktop') {
+    console.warn(DESKTOP_DORMANT_NOTICE)
+    return
+  }
+
   const trustedHosts = config?.trustedHosts ?? []
   const maxRequestBodyBytes = config?.maxRequestBodyBytes ?? DEFAULT_MAX_REQUEST_BODY_BYTES
   for (const entry of trustedHosts) assertTrustedAuthority(entry)

@@ -97,9 +97,19 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
   await writeFile(join(dist, 'index.html'), '<head></head><body>shell</body>')
   await writeFile(join(dist, 'app.js'), 'export {}')
 
-  // 行清单 yml：{{ROOT}} 占位替换为临时根目录。
+  // 行清单 yml：{{ROOT}} 占位替换为临时根目录。替换在解析后的对象树上递归做，
+  // 不在 JSON 字符串上做——Windows 根路径的反斜杠拼进 JSON 字符串会产生非法
+  // 转义（Bad escaped character），Linux 正斜杠路径则从不暴露该缺陷。
+  const substituteRoot = (value) => {
+    if (typeof value === 'string') return value.replaceAll('{{ROOT}}', root)
+    if (Array.isArray(value)) return value.map(substituteRoot)
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, substituteRoot(item)]))
+    }
+    return value
+  }
   const configPath = join(root, 'cordis.rows.yml')
-  await writeFile(configPath, yaml.dump(JSON.parse(JSON.stringify(rows).replaceAll('{{ROOT}}', root))))
+  await writeFile(configPath, yaml.dump(substituteRoot(JSON.parse(JSON.stringify(rows)))))
 
   // patchList：仓库 cordis.patch.yml（!!js 解析为 __jsExpr 节点）+ extraPatches。
   const repoPatch = yaml.load(await readFile(new URL('../../cordis.patch.yml', import.meta.url), 'utf8'), { schema })

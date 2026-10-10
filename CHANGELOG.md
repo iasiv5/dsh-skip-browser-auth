@@ -4,6 +4,14 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.3.12] - 2026-10-11
+
+- **修复 desktop 被用户层强制启用时的报错风暴（pin 覆盖收编，运行时权威休眠）**：dsh-m 插件开关 / `dsh plugin add` enable 通道按行 id 向用户 patch 层写 `- id: trusted-connection  disabled: false`，合法覆盖本插件自门控的 `!!js` disabled 表达式 ⇒ 行强制 active、apply 被调 ⇒ 0.3.11 及以前 backstop fail loud（`desktop profile not supported; disable or uninstall the plugin`），DSH Desktop 上每次开关任意插件触发热重载都弹报错（2026-10-11 Windows 实机实录）
+- 修复 = `apply()` 最前置宿主判别：desktop ⇒ 静默休眠 no-op（一行可 grep 通知、零 throw、零配置校验、零副作用）——**apply 内判定是唯一权威，组合期表达式降级为优化**（可被用户层 pin 合法覆盖，不再承担语义）
+- 语义对齐：0.3.10 已把客户端半区改为休眠静默 no-op，本版把宿主半区 desktop 分支对齐同一哲学；§7.4 教训（任何半区的 throw 都可能炸宿主）由「desktop 可达的残余 throw」收敛为「仅 web 契约破坏时 throw」
+- **web 侧行为零变化**：desktop 分支在 web 不可达（槽位/argv/execPath 组合信号）；锚点解析失败、版本对不在白名单、profile mismatch、binding violated 四类 fail loud 全保留；兼容 DSH 版本对不变
+- desktop 实机 checklist 前置门禁照旧执行，并新增断言：pin 态下 dsh-m 开关任意插件零报错横幅；四类历史崩溃模式逐条预演零回归（docs/COMPATIBILITY.md §7.8）
+
 ## [0.3.11] - 2026-10-08
 
 - **修复 desktop 判别的真正根因（控制流缺陷）**：desktop 的 resolver 对 `dsh-desktop-host` 是 **throw**（真机探针实证："Cannot find package…"），而 web 机返回 null——0.3.8-0.3.10 的判别表达式把四个信号放在**同一个共享 try** 里，信号①的 throw 会直接跳到 catch 并落 `'web'`，**跳过 argv/槽位/execPath 全部后续信号** ⇒ 在 desktop 误激活 ⇒ 官方 connection 行被禁用 + backstop fail-loud 使行回滚 ⇒ connection 服务缺失 ⇒ `dsh-desktop-host` 读 `undefined.authenticatedUrl` 启动失败

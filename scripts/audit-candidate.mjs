@@ -231,7 +231,17 @@ export function loaderSeamReport(extractedA, extractedB, renames) {
 }
 
 function npmPack(pkg, version, dest) {
-  execFileSync('npm', ['pack', `${pkg}@${version}`, '--pack-destination', dest, '--silent'], {
+  // 跨平台 npm 调用：Windows 上 spawnSync 禁止直接起 .cmd（CVE-2024-27980，
+  // EINVAL），改为 node <npm-cli.js> 直启。注意 mkdir/tar 两处仍是 Unix 命令，
+  // 本脚本整体仅声明支持 Unix；此处只修 test:all 链路共用的 npm 解析。
+  if (process.platform === 'win32') {
+    const npmCli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+    return execFileSync(process.execPath, [npmCli, 'pack', `${pkg}@${version}`, '--pack-destination', dest, '--silent'], {
+      cwd: ROOT,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    })
+  }
+  return execFileSync('npm', ['pack', `${pkg}@${version}`, '--pack-destination', dest, '--silent'], {
     cwd: ROOT,
     stdio: ['ignore', 'ignore', 'pipe'],
   })

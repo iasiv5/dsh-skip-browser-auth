@@ -140,23 +140,28 @@ export interface GateResolverLike {
 }
 
 /**
- * Node 侧宿主形态检测（apply backstop 镜像）：与 GATE_PROFILE_EXPRESSION 内联检测
- * 同语义，desktop 双信号取或——① desktop 信号包自 baseUrl 解析出合法
- * {url: string}（抛错/空值/url 非字符串视为不可达，继续②）；② 宿主进程
- * process.argv 含 `dsh-desktop-host`（与官方 isPackagedDesktopArgv 同款）。
- * 两信号皆否 ⇒ 'web'（fail-closed 兜底是后续版本对判定）。
- * 调用方需已确认 resolver 存在（assertGateBackstop 的 presence 检查先于此执行）。
+ * Node 侧宿主形态检测（apply backstop 镜像 + apply 前置判别共用）：与
+ * GATE_PROFILE_EXPRESSION 内联检测同语义，desktop 信号取或——① desktop 信号包自
+ * baseUrl 解析出合法 {url: string}（抛错/空值/url 非字符串视为不可达，继续②）；
+ * ② 宿主进程 process.argv 含 `dsh-desktop-host`（与官方 isPackagedDesktopArgv
+ * 同款）。两信号皆否 ⇒ 'web'（fail-closed 兜底是后续版本对判定）。
+ * resolver 允许为 undefined（0.3.12 起 apply 在 presence 检查之前先调用本函数做
+ * 前置判别）：信号① 对 undefined 的访问在自身 try/catch 内消化，其余信号不依赖
+ * resolver——undefined 一律按「信号①不可达」处理，语义不变。
  */
-export function detectHostProfile(internal: GateResolverLike, baseUrl: string): HostProfile {
+export function detectHostProfile(internal: GateResolverLike | undefined, baseUrl: string): HostProfile {
   const specifier = `${DESKTOP_HOST_PACKAGE}/package.json`
-  try {
-    const resolved = internal.version === 'v2'
-      ? internal.resolveSync(baseUrl, { specifier, attributes: {} })
-      : internal.resolveSync(specifier, baseUrl, {})
-    const url = (resolved as { url?: unknown } | null | undefined)?.url
-    if (typeof url === 'string') return 'desktop'
-  } catch {
-    // 信号包不可达/解析异常 ⇒ 落到宿主进程 argv 判别
+  // resolver 缺省 ⇒ 信号①按「不可达」处理（与原 try/catch 消化 TypeError 等价）。
+  if (internal !== undefined) {
+    try {
+      const resolved = internal.version === 'v2'
+        ? internal.resolveSync(baseUrl, { specifier, attributes: {} })
+        : internal.resolveSync(specifier, baseUrl, {})
+      const url = (resolved as { url?: unknown } | null | undefined)?.url
+      if (typeof url === 'string') return 'desktop'
+    } catch {
+      // 信号包不可达/解析异常 ⇒ 落到宿主进程 argv 判别
+    }
   }
   let slot = ''
   try {

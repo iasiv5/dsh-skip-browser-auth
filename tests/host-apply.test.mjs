@@ -9,6 +9,7 @@ import { CONNECTION_PACKAGE, GATE_RUNTIME_PACKAGE } from '../lib/gate.js'
 import { writeGateFixtures, dispatchingResolveSync } from './helpers/gate-fixture.mjs'
 
 const FIXED_WARNING = '@iasiv5/dsh-skip-browser-auth: BrowserAuth has been skipped. DSH Web is using the trusted-network behavior; this plugin does not verify any upstream proxy.'
+const DORMANT_NOTICE = '@iasiv5/dsh-skip-browser-auth: desktop host detected — dormant by design (web-only plugin); official connection untouched. Safe to uninstall.'
 
 test('plugin injects only webServer and exports a Config schema', () => {
   assert.deepEqual(inject, ['webServer'])
@@ -237,24 +238,35 @@ test('backstop failure fires before service creation, route registration, and wa
   assert.equal(warnings.length, 0)
 })
 
-test('backstop negative C: desktop host package present — fail loud before any route', async (t) => {
-  // 桌面宿主信号在场 ⇒ backstop 镜像检测先于锚点解析 fail loud
-  // （纵深防御：正常流程第①道探针已休眠，此层只防「patch 激活但不应激活」）。
+// 0.3.12 起 desktop 上 apply 是静默休眠 no-op（见 C12 系列用例）；三个 backstop
+// 负向 web 用例（loader/internal/entry 缺失）保持 fail loud 不变。
+
+test('desktop dormant C12a: host package present — apply is a silent no-op before any route', async (t) => {
+  // 用户层 pin（dsh-m 插件开关 / `dsh plugin add` enable 通道按行 id 写
+  // disabled:false）可合法覆盖组合期 !!js 门控 ⇒ 行强制 active、apply 被调
+  // （2026-10-11 实录；0.3.11 同场景 backstop fail loud，即每次开关插件都弹
+  // 报错的根因）。0.3.12 起 apply 最前置宿主判别：desktop ⇒ 静默休眠——
+  // 零 throw、零路由、零 SKIP_WARNING，仅一行固定通知（§7.4 教训）。
   const { urls } = await writeGateFixtures(t, { desktopHost: true })
   const { ctx, routes } = makeContext()
   const { self } = fakeSelfWithRow()
   ctx.provide('loader', fakeLoader(urls))
   ctx.fiber = { entry: self }
-  await assert.rejects(
-    apply(ctx, {}),
-    /desktop profile not supported.*disable or uninstall the plugin/,
-  )
+  const warnings = []
+  const originalWarn = console.warn
+  console.warn = (msg) => { warnings.push(msg) }
+  try {
+    await apply(ctx, {})
+  } finally {
+    console.warn = originalWarn
+  }
   assert.equal(routes.length, 0)
+  assert.deepEqual(warnings, [DORMANT_NOTICE])
 })
 
-test('backstop negative C2: desktop launcher argv — fail loud before any route', async (t) => {
+test('desktop dormant C12b: desktop launcher argv — apply is a silent no-op before any route', async (t) => {
   // 0.3.8 事故修复镜像：desktop-host 包不可达（不注册）但宿主 argv 携带
-  // dsh-desktop-host ⇒ backstop 仍 fail loud（先于锚点解析与任何 route）。
+  // dsh-desktop-host ⇒ 前置判别仍判 desktop，静默休眠（先于锚点解析与任何 route）。
   const { urls } = await writeGateFixtures(t)
   const { ctx, routes } = makeContext()
   const { self } = fakeSelfWithRow()
@@ -267,28 +279,46 @@ test('backstop negative C2: desktop launcher argv — fail loud before any route
     'C:\\Users\\ies\\AppData\\Local\\Programs\\deepseek\\resources\\dsh',
     'C:\\Users\\ies\\.dsh\\profiles\\desktop',
   ]
+  const warnings = []
+  const originalWarn = console.warn
+  console.warn = (msg) => { warnings.push(msg) }
   try {
-    await assert.rejects(
-      apply(ctx, {}),
-      /desktop profile not supported.*disable or uninstall the plugin/,
-    )
+    await apply(ctx, {})
   } finally {
+    console.warn = originalWarn
     process.argv = originalArgv
   }
   assert.equal(routes.length, 0)
+  assert.deepEqual(warnings, [DORMANT_NOTICE])
 })
 
-test('backstop negative C3: desktop slot baseUrl — fail loud before any route', async (t) => {
-  // 0.3.9 镜像：desktop 槽位（进程树无关的构造性判别）⇒ backstop fail loud。
+test('desktop dormant C12c: desktop slot baseUrl — apply is a silent no-op before any route', async (t) => {
+  // 0.3.9 镜像：desktop 槽位（进程树无关的构造性判别）⇒ 静默休眠。
   const { urls } = await writeGateFixtures(t, { runtimeVersion: '0.2.0-rc.2', connectionVersion: '0.2.0-rc.2' })
   const { ctx, routes } = makeContext()
   const { self } = fakeSelfWithRow()
   ctx.baseUrl = 'file:///C:/Users/ies/.dsh/profiles/desktop/'
   ctx.provide('loader', fakeLoader(urls))
   ctx.fiber = { entry: self }
-  await assert.rejects(
-    apply(ctx, {}),
-    /desktop profile not supported.*disable or uninstall the plugin/,
-  )
+  const warnings = []
+  const originalWarn = console.warn
+  console.warn = (msg) => { warnings.push(msg) }
+  try {
+    await apply(ctx, {})
+  } finally {
+    console.warn = originalWarn
+  }
+  assert.equal(routes.length, 0)
+  assert.deepEqual(warnings, [DORMANT_NOTICE])
+})
+
+test('web path guard: node binary + no desktop signals still reaches the gate backstop', async (t) => {
+  // 对照组：web 形态（无任何 desktop 信号）不进休眠分支，契约破坏照旧 fail loud
+  // ——锚点解析失败（无 fixture）⇒ backstop throw，而非静默休眠。
+  const { ctx, routes } = makeContext()
+  const { self } = fakeSelfWithRow()
+  ctx.provide('loader', fakeLoader({}))
+  ctx.fiber = { entry: self }
+  await assert.rejects(apply(ctx, {}), /gate anchor .* did not resolve/)
   assert.equal(routes.length, 0)
 })
