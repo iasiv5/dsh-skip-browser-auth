@@ -9,8 +9,8 @@
  */
 
 export type CompatibilityStatus = 'active' | 'candidate'
-export type HostAdapterKind = 'legacy-web' | 'carrier-neutral' | 'carrier-neutral-017'
-export type ClientVariant = 'rc12' | 'rc15' | 'rc17'
+export type HostAdapterKind = 'legacy-web' | 'carrier-neutral' | 'carrier-neutral-017' | 'carrier-neutral-021'
+export type ClientVariant = 'rc12' | 'rc15' | 'rc17' | 'rc21'
 
 /**
  * 运行时宿主形态（host profile）：web = 通用 Web runtime；desktop = 内置
@@ -95,6 +95,15 @@ export const COMPATIBILITY_PROFILES = [
     // a ModuleLoader chunk-hash rename whose 34 changed lines all sit in that CLI
     // area with resolveSync usage line-identical. rc17 keeps anchoring at
     // 0.1.7-rc.2; no second 0.2.x-line build input is introduced.
+    //
+    // 0.2.1-rc.1 does NOT join this generation (§5.8): unlike every rc.2-style
+    // republish it is a real contract change on the replacement face —
+    // OperatorPeer reworked into per-request Peer instances with principals,
+    // the shared-route bridge threading admission.peer into fetch, a new
+    // /connect exact channel (authorizeConnect), the client bundle split into
+    // browser/node entries, and the official patch's connection row moving
+    // from the webRuntime to the webStartup service. It therefore starts the
+    // carrier-neutral-v4 generation below (docs/COMPATIBILITY.md §5.2/§5.9).
     id: 'carrier-neutral-v3',
     pairs: [
       { runtime: '0.1.7-rc.1', connection: '0.1.7-rc.1' },
@@ -112,10 +121,41 @@ export const COMPATIBILITY_PROFILES = [
     // promotion evidence (docs/COMPATIBILITY.md §5.4, docs/DESIGN.md).
     status: 'active',
   },
+  {
+    // 0.2.1-rc.1 starts its own generation (§5.8 audit → §5.2 new generation):
+    // the official apply wiring it must replicate is admit() → waterfall →
+    // bridge(req, res, fetchHandler, admission.peer, maxRequestBodyBytes) plus
+    // the new exact /connect route (connection.authorizeConnect). The
+    // HostConnectionService constructor (ctx, trustedHosts, browserAuth) is
+    // unchanged, but the patch row serving this generation reads trustedHosts
+    // from the webStartup service (webRuntime is gone upstream; the official
+    // 0.2.1 patch row made the same move and narrows trustedHosts to the
+    // explicit invocation authorities). The rc21 client variant anchors at the
+    // official browser entry lib/client.browser.js of 0.2.1-rc.1 — no other
+    // generation shares this build input.
+    id: 'carrier-neutral-v4',
+    pairs: [
+      { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
+    ],
+    hostAdapter: 'carrier-neutral-021',
+    clientVariant: 'rc21',
+    requiresRecoveryGlobal: true,
+    browserAuthSemantics: 'mount-preserving',
+    hostProfiles: ['web'],
+    status: 'active',
+  },
 ] as const
 
 export type CompatibilityProfile = typeof COMPATIBILITY_PROFILES[number]
 export type CompatibilityProfileId = CompatibilityProfile['id']
+
+/**
+ * The §5.9 generation id: the only profile whose bundle patch row injects the
+ * `webStartup` service (upstream renamed webRuntime → webStartup in 0.2.1).
+ * The row-binding expressions in gate.ts partition the active profile ids by
+ * this constant so exactly one inserted row can activate per host generation.
+ */
+export const CARRIER_NEUTRAL_V4_PROFILE_ID: CompatibilityProfileId = 'carrier-neutral-v4'
 
 /** All exact versions represented by profiles, for diagnostics and fixtures. */
 export const GATE_VERSIONS = [...new Set(

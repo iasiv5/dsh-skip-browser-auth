@@ -35,8 +35,9 @@ test('parsePairs reads the exact-pair table from the compatibility source', () =
     { runtime: '0.1.7-rc.2', connection: '0.1.7-rc.2' },
     { runtime: '0.2.0-rc.1', connection: '0.2.0-rc.1' },
     { runtime: '0.2.0-rc.2', connection: '0.2.0-rc.2' },
+    { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
   ])
-  assert.equal(pickBasePair(pairs).runtime, '0.2.0-rc.2')
+  assert.equal(pickBasePair(pairs).runtime, '0.2.1-rc.1')
 })
 
 test('isVersionMissingError recognizes npm version-not-found failures, not transient ones', () => {

@@ -12,7 +12,8 @@
 | --- | --- | --- | --- | --- |
 | `legacy-web-v1` | `0.1.2-rc.1` + `0.1.2-rc.1` | legacy webserver：`/api` prefix + buffered bridge | rc12 官方 client | ✅ active |
 | `carrier-neutral-v2` | `0.1.5-rc.1` + `0.1.5-rc.1`；`0.1.5-rc.2` + `0.1.5-rc.2` | carrier-neutral：runtime module + requestBodyMode + RPC carrier | rc15 官方 client | ✅ active（代码和真实 npm fixture 已验证；真实 DSH 部署仍需执行清单。rc.2 为 rc.1 的依赖版本对齐重发布，审计见 COMPATIBILITY.md §5.3） |
-| `carrier-neutral-v3` | `0.1.7-rc.1` + `0.1.7-rc.1`；`0.1.7-rc.2` + `0.1.7-rc.2`；`0.2.0-rc.1` + `0.2.0-rc.1` | carrier-neutral-017：admit()/OperatorPeer + `connection/request` waterfall + mount-preserving BrowserAuth | rc17 官方 client | ✅ active（真实 npm fixture 组合覆盖三个 pair + 2026-09-26 本机 0.1.7-rc.2 实机 checklist + 回滚演练，见下文与 COMPATIBILITY.md §5.4/§5.5/§5.6。rc.1/rc.2/0.2.0-rc.1 在插件契约面逐字节一致，审计见 §5.5/§5.6） |
+| `carrier-neutral-v3` | `0.1.7-rc.1` + `0.1.7-rc.1`；`0.1.7-rc.2` + `0.1.7-rc.2`；`0.2.0-rc.1` + `0.2.0-rc.1`；`0.2.0-rc.2` + `0.2.0-rc.2` | carrier-neutral-017：admit()/OperatorPeer + `connection/request` waterfall + mount-preserving BrowserAuth | rc17 官方 client | ✅ active（真实 npm fixture 组合覆盖全部 pair + 2026-09-26 本机 0.1.7-rc.2 实机 checklist + 回滚演练，见下文与 COMPATIBILITY.md §5.4/§5.5/§5.6/§5.7。rc.1/rc.2/0.2.0-rc.1/rc.2 在插件契约面逐字节一致，审计见 §5.5/§5.6/§5.7） |
+| `carrier-neutral-v4` | `0.2.1-rc.1` + `0.2.1-rc.1` | carrier-neutral-021：Peer/principal 准入 + `admission.peer` 透传 bridge + `/connect` 交换通道 + webStartup 信任来源 | rc21 官方 browser client | ✅ active（§5.8 契约审计定谳新代际；真实 npm fixture 组合见 §5.9。实机 checklist 待宿主升级 0.2.1 后回填） |
 | — | 混合版本、未知版本、未实现 profile | — | — | 😴 dormant |
 
 以下组合不得激活：
@@ -118,9 +119,11 @@ sudo systemctl restart deepseek-harness.service
 | 0.1.2 pair + `legacy-web-v1` | `disabled: true` | `disabled: false` | 旧版 `/api` prefix、buffered bridge、rc12 client、固定 warning |
 | 0.1.5 pair + `carrier-neutral-v2` | `disabled: true` | `disabled: false` | carrier-neutral runtime、requestBodyMode、exact Fetch POST、RPC carrier、rc15 client、固定 warning |
 | 0.1.7 pair + `carrier-neutral-v3` | `disabled: true` | `disabled: false` | carrier-neutral-017 runtime、admit()/OperatorPeer、`connection/request` waterfall、mount-preserving token 清理（303 `./`）、rc17 client、固定 warning |
+| 0.2.1 pair + `carrier-neutral-v4` | `disabled: true` | `disabled: false`（`trusted-connection-021` 行；`trusted-connection` 行恒 dormant） | carrier-neutral-021 runtime、Peer/principal 准入、`admission.peer` 透传 bridge、`/connect` 交换通道（302 `./api/remote.mux`）、webStartup 信任来源、mount-preserving token 清理、rc21 client、固定 warning |
 | 0.1.2 runtime + 0.1.5 connection | 活跃 | dormant | 官方行为，不提供替代服务 |
 | 0.1.5 runtime + 0.1.2 connection | 活跃 | dormant | 官方行为，不提供替代服务 |
 | 0.1.5 ↔ 0.1.7/0.2.0 任一方向混合、0.1.7-rc.1 ↔ 0.1.7-rc.2 跨 patch 混合、0.1.7 ↔ 0.2.0-rc.1 跨 minor 混合 | 活跃 | dormant | 官方行为，不提供替代服务 |
+| 0.2.0 ↔ 0.2.1-rc.1 任一方向混合（跨代际：§5.8 真实契约变化） | 活跃 | dormant | 官方行为，不提供替代服务 |
 | 未知版本对 | 活跃 | dormant | 官方行为分毫不变 |
 | active pair + runtime/manifest drift | 不稳定 | backstop fail loud | 不创建服务、不注册 route、不输出 active warning |
 | active pair + 官方行 name mismatch | 活跃 | dormant | patch name guard 防止冲突 |

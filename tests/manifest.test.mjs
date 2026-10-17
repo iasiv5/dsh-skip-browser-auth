@@ -71,6 +71,20 @@ test('rc202 stays a fixture-only alias (never a runtime dep or build anchor)', (
   }
 })
 
+test('rc211 stays a fixture-only alias (never a runtime dep; the build anchor is the rc21 devDep)', () => {
+  // rc211 是 0.2.1-rc.1 的组合测试 fixture 别名（--no-save 安装）。v4 的 client
+  // variant 构建锚点是 devDependencies 里的 dsh-client-connection-rc21（精确
+  // devDep），rc211 别名不得进入任何 dependencies/devDependencies，避免出现
+  // 第二个 0.2.x 线构建输入（docs/COMPATIBILITY.md §5.9）。
+  const dependencies = manifest.dependencies ?? {}
+  const devDependencies = manifest.devDependencies ?? {}
+  for (const alias of ['dsh-client-connection-rc211', 'frontend-static-rc211', 'webserver-rc211']) {
+    assert.equal(dependencies[alias], undefined)
+    assert.equal(devDependencies[alias], undefined)
+  }
+  assert.equal(devDependencies['dsh-client-connection-rc21'], 'npm:@deepseek-ai/dsh-client-connection@0.2.1-rc.1')
+})
+
 test('gate anchors never collide with declared runtime dependencies', () => {
   const dependencies = manifest.dependencies ?? {}
   for (const anchor of [GATE_RUNTIME_PACKAGE, CONNECTION_PACKAGE]) {

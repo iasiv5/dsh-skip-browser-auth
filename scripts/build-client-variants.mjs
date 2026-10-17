@@ -27,14 +27,32 @@ const VARIANTS = [
     label: 'rc17',
     specifier: 'dsh-client-connection-rc17/client',
   },
+  {
+    // 0.2.1 拆分了 client bundle（browser/node 两个入口，exports `./client`
+    // 按 condition 二选一），而 require.resolve 的默认 conditions 命中 node
+    // 入口。浏览器变体必须显式锚定 lib/client.browser.js——经 package.json
+    // 定位包根后拼相对路径，不玩 conditions 游戏。
+    profileId: 'carrier-neutral-v4',
+    label: 'rc21',
+    specifier: 'dsh-client-connection-rc21/package.json',
+    clientFile: 'lib/client.browser.js',
+  },
 ]
 
 function countOccurrences(text, needle) {
   return text.split(needle).length - 1
 }
 
-function readOfficialClient(specifier) {
-  const path = require.resolve(specifier)
+function readOfficialClient(specifier, clientFile) {
+  let path
+  if (clientFile !== undefined) {
+    // 0.2.1 形态：specifier 指向 package.json，clientFile 为包内相对路径
+    // （浏览器入口；require.resolve 默认 conditions 会命中 node 入口）。
+    const manifestPath = require.resolve(specifier)
+    path = join(dirname(manifestPath), clientFile)
+  } else {
+    path = require.resolve(specifier)
+  }
   const source = readFileSync(path, 'utf8')
   const wrapper = 'window.__ModuleLoader__.load({'
   const factoryMarker = 'factory: (require) => {'
@@ -54,7 +72,7 @@ function readOfficialClient(specifier) {
 
 const extracted = VARIANTS.map((variant) => ({
   ...variant,
-  body: readOfficialClient(variant.specifier),
+  body: readOfficialClient(variant.specifier, variant.clientFile),
 }))
 
 const factoryBlocks = extracted.map((variant) => [

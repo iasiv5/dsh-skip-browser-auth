@@ -2,7 +2,8 @@
  * @iasiv5/dsh-skip-browser-auth host half：trusted-network Connection Replacement。
  *
  * 兼容性按 profile 分代：0.1.2 使用 legacy-web adapter，0.1.5 使用
- * carrier-neutral adapter，0.1.7 使用 carrier-neutral-017 adapter。公共 apply
+ * carrier-neutral adapter，0.1.7–0.2.0 使用 carrier-neutral-017 adapter，
+ * 0.2.1 起使用 carrier-neutral-021 adapter。公共 apply
  * 只负责 profile/backstop、信任配置、生命周期和固定 warning；版本差异藏在
  * adapter 与 runtime connection loader。
  */
@@ -28,6 +29,7 @@ import { loadRuntimeConnectionModule } from './connection-runtime.js'
 import { createLegacyWebRuntime } from './adapters/legacy-web.js'
 import { createCarrierNeutralRuntime } from './adapters/carrier-neutral.js'
 import { createCarrierNeutral017Runtime } from './adapters/carrier-neutral-017.js'
+import { createCarrierNeutral021Runtime } from './adapters/carrier-neutral-021.js'
 import type { HostRuntime } from './adapters/types.js'
 import { assertTrustedAuthority } from './trust-fence.js'
 import { createTrustedAuth } from './trusted-auth.js'
@@ -222,6 +224,8 @@ function createHostRuntime(profile: CompatibilityProfile, input: Parameters<type
       return createCarrierNeutralRuntime(input)
     case 'carrier-neutral-017':
       return createCarrierNeutral017Runtime(input)
+    case 'carrier-neutral-021':
+      return createCarrierNeutral021Runtime(input)
     default:
       throw new Error('@iasiv5/dsh-skip-browser-auth: unsupported host adapter')
   }
@@ -265,6 +269,10 @@ export async function apply(ctx: Context, config?: TrustedConnectionConfig): Pro
   })
 
   ctx.effect(() => ctx.webServer.register(runtime.route), `@iasiv5/dsh-skip-browser-auth: ${runtime.adapterId} ${runtime.route.path} route`)
+  // 代际附加路由（官方 apply 注册顺序照抄）：0.2.1 的 /connect exact 通道。
+  for (const additionalRoute of runtime.additionalRoutes ?? []) {
+    ctx.effect(() => ctx.webServer.register(additionalRoute), `@iasiv5/dsh-skip-browser-auth: ${runtime.adapterId} ${additionalRoute.path} route`)
+  }
   installBrowserGlobals(ctx, profile)
   ctx.inject(['attachments'], (attachmentCtx) => {
     assertImageBodyCapacity(attachmentCtx, maxRequestBodyBytes)

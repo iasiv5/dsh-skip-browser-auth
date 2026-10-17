@@ -14,6 +14,12 @@ export interface RuntimeConnection {
    * carrier-neutral-017 adapter may call it.
    */
   admit?(request: unknown): { peer?: unknown } | { rejection: 401 | 403 }
+  /**
+   * 0.2.1 `/connect` seam (carrier-neutral-021): authorizes one socket
+   * connection request on the exact CONNECT_PATH channel. Absent on earlier
+   * generations; only the carrier-neutral-021 adapter may call it.
+   */
+  authorizeConnect?(request: unknown, response: unknown): unknown
 }
 
 /** Runtime module shape shared by the 0.1.2 and 0.1.5 connection packages. */
@@ -24,6 +30,12 @@ export interface RuntimeConnectionModule {
     browserAuth: unknown,
   ) => RuntimeConnection
   readonly API_PATH: string
+  /**
+   * 0.2.1 only: the exact socket-connect channel path (`"/connect"`).
+   * Undefined on earlier generations — its presence is the carrier-neutral-021
+   * generation seam (§5.9).
+   */
+  readonly CONNECT_PATH?: string
 }
 
 /**

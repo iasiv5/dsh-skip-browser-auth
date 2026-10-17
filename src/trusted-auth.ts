@@ -1,9 +1,9 @@
 /**
  * Trusted-network replacement for the official BrowserAuth stub.
  *
- * 官方 HostConnectionService 对认证的全部依赖只有三个方法：
- * isAuthenticated / authorizeIndex / authenticatedUrl。本模块以
- * trusted-network 语义提供三方法 stub：请求信任栅栏（Host/Origin/
+ * 官方 HostConnectionService 对认证的全部依赖（0.2.1 起）只有四个方法：
+ * isAuthenticated / authorizeIndex / authenticatedUrl / authorizeConnect。
+ * 本模块以 trusted-network 语义提供四方法 stub：请求信任栅栏（Host/Origin/
  * Fetch Metadata/trustedHosts）承担全部访问判定，身份层不存在。
  * 首页 fence 与 /api fence 消费同一个 trustedHosts 列表。
  */
@@ -31,6 +31,15 @@ export interface TrustedAuth {
   authorizeIndex(req: ConnectionIndexRequest, res: ConnectionIndexResponse): boolean
   /** Return the clean application URL; nothing is appended without auth. */
   authenticatedUrl(baseUrl: string): string
+  /**
+   * 0.2.1 `/connect` exchange (carrier-neutral-021 only). The official stub
+   * mints an operator cookie and 302s to the API mux; trusted-network mode has
+   * no identity to mint, so the stub validates the client protocol contract
+   * (interactions declaration) and reproduces the official success redirect
+   * without a cookie or an operator record — every subsequent /api request is
+   * admitted as the owner-principal browserPeer regardless.
+   */
+  authorizeConnect(req: ConnectionIndexRequest, res: ConnectionIndexResponse, secure?: boolean, publish?: (interactions: string) => unknown): void
 }
 
 const TOKEN_QUERY = 'token'
@@ -91,6 +100,36 @@ export function createTrustedAuth(
       url.search = ''
       url.hash = ''
       return url.href
+    },
+
+    // 0.2.1 /connect 交换（trusted-network 语义）：
+    // - interactions 声明校验逐字对齐官方（客户端协议契约，400 兜底）；
+    // - 官方成功路径 = mint operator cookie + 302 ./api/remote.mux；本 stub
+    //   省略 cookie 与 operator 记录（无身份可铸造；publish 不调用，避免
+    //   生成无 cookie 引用的孤儿 operator 台账），其余响应形态逐字对齐。
+    //   后续 /api 请求由 admit() 恒准为 owner-principal browserPeer，mux
+    //   连接不依赖该 cookie。
+    // - 服务层已在 authorizeConnect 入口做过 isTrusted（evil host ⇒ 403，
+    //   不达本 stub）；身份/token 校验路径在本模式恒通过（isAuthenticated
+    //   恒真），token 缺失不再 401。
+    authorizeConnect(req: ConnectionIndexRequest, res: ConnectionIndexResponse, _secure?: boolean, _publish?: (interactions: string) => unknown): void {
+      const url = new URL(req.url ?? '/', 'http://dsh.invalid')
+      const declarations = url.searchParams.getAll('interactions')
+      const interactions = declarations[0] ?? 'none'
+      if (declarations.length > 1 || (interactions !== 'answer' && interactions !== 'none')) {
+        res.writeHead(400, {
+          'cache-control': 'no-store',
+          'content-type': 'text/plain; charset=utf-8',
+        })
+        res.end('interactions must be declared once as answer or none\n')
+        return
+      }
+      res.writeHead(302, {
+        'cache-control': 'no-store',
+        'location': './api/remote.mux',
+        'referrer-policy': 'no-referrer',
+      })
+      res.end()
     },
   }
 }

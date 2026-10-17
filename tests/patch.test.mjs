@@ -9,6 +9,7 @@ import {
   GATE_PROFILE_EXPRESSION,
   GATE_PROBE_EXPRESSION,
   GATE_ROW_ALLOWED_EXPRESSION,
+  GATE_ROW_ALLOWED_EXPRESSION_V4,
 } from '../lib/gate.js'
 import { writeGateFixtures, dispatchingResolveSync } from './helpers/gate-fixture.mjs'
 
@@ -61,19 +62,50 @@ test('row 1 patches the official connection row with the probe expression and no
   assert.deepEqual(row1.disabled, { __jsExpr: GATE_PROBE_EXPRESSION })
 })
 
-test('row 2 inserts the plugin row with the negated row gate', () => {
+test('row 2 inserts two generation-partitioned plugin rows with negated row gates', () => {
   const [, row2] = patchList
   assert.equal(Array.isArray(row2.insert), true)
-  assert.equal(row2.insert.length, 1)
-  const inserted = row2.insert[0]
-  assert.equal(inserted.id, 'trusted-connection')
-  assert.equal(inserted.name, '@iasiv5/dsh-skip-browser-auth')
-  assert.deepEqual(inserted.inject, ['webRuntime'])
-  assert.deepEqual(inserted.disabled, { __jsExpr: `!(${GATE_ROW_ALLOWED_EXPRESSION})` })
-  assert.deepEqual(inserted.config, {
+  // §5.9：≤0.2.0 行（webRuntime）+ 0.2.1+ 行（webStartup），id 集合互斥。
+  assert.equal(row2.insert.length, 2)
+  const [legacyRow, v4Row] = row2.insert
+  assert.equal(legacyRow.id, 'trusted-connection')
+  assert.equal(legacyRow.name, '@iasiv5/dsh-skip-browser-auth')
+  assert.deepEqual(legacyRow.inject, ['webRuntime'])
+  assert.deepEqual(legacyRow.disabled, { __jsExpr: `!(${GATE_ROW_ALLOWED_EXPRESSION})` })
+  assert.deepEqual(legacyRow.config, {
     trustedHosts: { __jsExpr: 'ctx.webRuntime.trustedHosts' },
     compatibilityProfile: { __jsExpr: GATE_PROFILE_EXPRESSION },
   })
+  assert.equal(v4Row.id, 'trusted-connection-021')
+  assert.equal(v4Row.name, '@iasiv5/dsh-skip-browser-auth')
+  assert.deepEqual(v4Row.inject, ['webStartup'])
+  assert.deepEqual(v4Row.disabled, { __jsExpr: `!(${GATE_ROW_ALLOWED_EXPRESSION_V4})` })
+  assert.deepEqual(v4Row.config, {
+    trustedHosts: { __jsExpr: 'ctx.webStartup.trustedHosts' },
+    compatibilityProfile: { __jsExpr: GATE_PROFILE_EXPRESSION },
+  })
+})
+
+test('generation partition: on a 0.2.1 pair only the webStartup row activates (and vice versa)', async (t) => {
+  const v4 = await writeGateFixtures(t, {
+    runtimeVersion: '0.2.1-rc.1',
+    connectionVersion: '0.2.1-rc.1',
+  })
+  const official = { options: { id: 'connection', name: CONNECTION_PACKAGE }, disabled: true }
+  const v4Ctx = activeRowCtx(official, v4.urls)
+  // 官方行被 v4 探针禁用；legacy 行绑定拒绝、v4 行绑定放行、config 读 webStartup。
+  assert.equal(evaluateWith(v4Ctx, patchList[0].disabled.__jsExpr), true)
+  assert.equal(evaluateWith(v4Ctx, patchList[1].insert[0].disabled.__jsExpr), true)
+  assert.equal(evaluateWith(v4Ctx, patchList[1].insert[1].disabled.__jsExpr), false)
+  assert.equal(evaluateWith(v4Ctx, patchList[1].insert[1].config.compatibilityProfile.__jsExpr), 'carrier-neutral-v4')
+
+  const v3 = await writeGateFixtures(t, {
+    runtimeVersion: '0.2.0-rc.2',
+    connectionVersion: '0.2.0-rc.2',
+  })
+  const v3Ctx = activeRowCtx(official, v3.urls)
+  assert.equal(evaluateWith(v3Ctx, patchList[1].insert[0].disabled.__jsExpr), false)
+  assert.equal(evaluateWith(v3Ctx, patchList[1].insert[1].disabled.__jsExpr), true)
 })
 
 test('active composition: the two rows evaluate exclusively (official disabled, plugin enabled)', async (t) => {

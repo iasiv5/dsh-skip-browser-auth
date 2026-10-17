@@ -135,6 +135,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 | `legacy-web-v1` | `@deepseek-ai/dsh-client-connection@0.1.2-rc.1/client` | profile global = `legacy-web-v1` |
 | `carrier-neutral-v2` | `@deepseek-ai/dsh-client-connection@0.1.5-rc.1/client` | profile global = `carrier-neutral-v2` |
 | `carrier-neutral-v3` | `@deepseek-ai/dsh-client-connection@0.1.7-rc.2/client` | profile global = `carrier-neutral-v3`（服务 v3 全部 pair，见 §5.5） |
+| `carrier-neutral-v4` | `@deepseek-ai/dsh-client-connection@0.2.1-rc.1` 的 `lib/client.browser.js`（0.2.1 拆分 browser/node 入口；`require.resolve` 默认 conditions 命中 node 入口，构建脚本经 package.json 定位浏览器入口） | profile global = `carrier-neutral-v4` |
 
 构建和测试要求：
 
@@ -339,6 +340,28 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 0.2.1 宿主上现版本插件的行为：双锚点 `0.2.1-rc.1` 不在白名单 ⇒ 探针 `null` ⇒ 官方行 enabled、trusted 行 disabled，安静休眠（判别法同 know-how 016）。**勿在 0.2.1 宿主上 pin `trusted-connection` 行**（0.3.12 的 apply 权威判别会拦住 desktop，但 web 上 pinned 行的 `ctx.webRuntime.trustedHosts` 组合层风险未验，v4 落地前不做该形态）。
 
+### 5.9 收编记录：新增 `carrier-neutral-v4` 代际服务 `0.2.1-rc.1`（2026-10-17）
+
+结论：**按 §5.2 新增代际并实现完毕**（0.4.0）：新 host adapter `carrier-neutral-021`、新 client variant `rc21`、bundle patch 双行代际拆分、`*-rc211` 真实 npm fixture 与全套组合测试。§5.1 第 1–5 条由实现 + 测试满足；第 6 条（真实 0.2.1 宿主 active checklist）待宿主升级后按 DESIGN 清单执行并回填 §6/§7.7。
+
+实现要点（与 §5.8 影响面清单逐条对应）：
+
+1. **host adapter（`src/adapters/carrier-neutral-021.ts`）**：逐行复刻官方 0.2.1 apply 的路由面——`/api` prefix 路由 `admit()` → `connection/request` 瀑布 → `bridgeWithPeer(req, res, fetchHandler, admission.peer, maxRequestBodyBytes)`；新增 exact `/connect` 路由整体委托 `connection.authorizeConnect(req, res)`（注册顺序照抄官方：/api 在前、/connect 在后）。代际 seam 守卫 = `CONNECT_PATH` 导出 + `authorizeConnect` 方法（0.1.7/0.2.0 模块在此确定性报错——`admit()` 存在性已不足以区分代际）；`register()` carrier 绑定包装与 017 同款（405 修复语义不变）。
+2. **bridge（`src/bridge.ts`）**：抽取共享 `bridgeRequest`，新增 `bridgeWithPeer` 把 admission Peer 透传 `apiHandler.fetch(request, peer)`（官方 0.2.1 bridge 唯一语义差异）；v3 适配器继续调用原 `bridge`，代际不互串。
+3. **trusted-auth 四方法 stub（`src/trusted-auth.ts`）**：新增 `authorizeConnect(req, res, secure?, publish?)`——interactions 声明校验逐字对齐官方（400 兜底，客户端协议契约）；成功路径复刻官方 302 `./api/remote.mux` 重定向形态，但**不铸造身份 cookie、不调用 publish**（trusted-network 无身份可铸造；publish 会生成无 cookie 引用的孤儿 operator 台账）。后续 `/api` 请求由 `admit()` 恒准为 owner-principal `browserPeer`（官方 `Peer`，principal owner——exact Fetch route 的 owner 守卫天然放行），mux 连接不依赖该 cookie。`authorizeIndex`/`isAuthenticated` 签名兼容 0.2.1 新增的 `secure` 尾参（stub 忽略）。
+4. **bundle patch 双行拆分（`write-patch.mjs` + `gate.ts`）**：行绑定表达式按代际参数化——`trusted-connection`（inject `webRuntime`，≤0.2.0，绑定集合排除 v4）与 `trusted-connection-021`（inject `webStartup`，绑定集合仅 v4）。两集合由 `compatibility.ts` 单表派生、互斥由测试锁定（gate.test/patch.test 分区断言）：任何宿主上至多一行激活，0.2.1 宿主上旧行因 webRuntime 服务不复存在而必然 dormant。`trusted-connection-021` 的 `config.trustedHosts` 读 `ctx.webStartup.trustedHosts`——逐字对齐官方 0.2.1 patch connection 行的同款迁移（webRuntime → webStartup 改名 + 语义收窄为显式 `--trusted-host` 值，bind IP 由连接服务单独接受）。
+5. **client variant（`build-client-variants.mjs`）**：`rc21` 锚定 devDep `dsh-client-connection-rc21@npm:@deepseek-ai/dsh-client-connection@0.2.1-rc.1` 的 `lib/client.browser.js`（0.2.1 拆分 browser/node 入口，`require.resolve` 默认 conditions 命中 node 入口，故经 package.json 定位浏览器入口）；anchor 检查与其它 variant 同款。`tests/manifest.test.mjs` 看护 rc211 fixture 别名不进清单、rc21 devDep 精确 pin。
+6. **fixture（`install-rc17-fixture.mjs`）**：`*-rc211` 别名安装真实 0.2.1-rc.1 的 connection/frontend-static/webserver。0.2.1 connection 的 scope peer 是 0.2.1-rc.1，但其消费面（scope `lib/index.js`，`createScope`）与 0.1.7-rc.2 逐字节一致（§5.8：仅独立 `invariant.js` 被剥离），共享 hoisted scope 副本无行为差异——rc20/rc202 先例，论证留档于脚本注释。
+
+第 4–5 条测试证据（本轮新增，全量 177 跑 176 过 0 败 1 skip）：
+
+- gate 探针/profile 解析：`0.2.1-rc.1` 精确对正例（探针 + `evaluateGate`）；`0.2.0-rc.1/rc.2 ↔ 0.2.1-rc.1` 与 `0.1.7-rc.2 ↔ 0.2.1-rc.1` 跨代际混合负例（必须 dormant）；行绑定代际分区断言（v3 pair 上 v4 行拒绝、v4 pair 上旧行拒绝、0.1.x 上 v4 行拒绝）。
+- 真实 npm fixture 组合（`tests/composition/active-rc211.test.mjs`）：full active checklist 用真实 0.2.1-rc.1 包复刻——行状态（官方行 disabled、021 行 enabled、旧行 disabled）、index profile marker `carrier-neutral-v4` + recovery global、mount-preserving 303 `./`、dedicated RPC 200 + Peer 第 4 参、瀑布对 sibling 可见且 403 不进瀑布、streaming Fetch route、**`/connect` 交换端点**（trusted 302 `./api/remote.mux`、interactions 违例 400、evil host 403）；跨代际混合双向 dormant（0.2.0-rc.2 ↔ 0.2.1-rc.1，且两行均 disabled）。
+- `tests/composition/npm-flat-rc17.test.mjs` 追加 0.2.1-rc.1 manifest 回退激活用例（dshm npm 扁平形态，`trusted-connection-021` 行激活）。
+- patch 结构断言（`tests/patch.test.mjs`）：双行插入结构与求值行为（v4 pair 仅 webStartup 行激活、v3 pair 仅 webRuntime 行激活、desktop 信号下两行均 dormant）。
+
+第 6 条（真实 DSH `0.2.1-rc.1` 宿主 active checklist）：待宿主升级后按 DESIGN 清单执行；预期断言 = 横幅逐字输出、无 token `GET /` 200、伪造 Host 403、`/?token=x` 303 `./`、`/connect` 302 `./api/remote.mux`、本 boot 守卫零 `skipping profile bundle`。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -354,6 +377,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 0.1.7-rc.1 真实 npm package carrier-neutral-v3 composition（§5.5：full active checklist、同代际跨 patch 混合双向 dormant、跨代际 dormant、npm flat 布局）
 - 0.2.0-rc.1 真实 npm package carrier-neutral-v3 composition（§5.6：full active checklist、跨 minor 混合双向 dormant、跨代际 dormant、npm flat 布局）
 - 0.2.0-rc.2 真实 npm package carrier-neutral-v3 composition（§5.7：full active checklist、同代际跨 patch 混合双向 dormant、npm flat 布局）
+- 0.2.1-rc.1 真实 npm package carrier-neutral-v4 composition（§5.9：full active checklist、`/connect` 交换端点、跨代际混合双向 dormant、行代际分区、npm flat 布局）
 - rc2 dormant 基线
 - 三个官方 client factory materialization 和 unknown profile fail-closed
 - `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。
@@ -367,6 +391,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 在真实运行 DSH `0.1.5-rc.2` 服务上的 active 部署结果（升级宿主后按同一清单执行）。
 - 在真实运行 DSH `0.1.7-rc.1` 服务上的 active 部署结果（宿主运行 rc.1 时按同一清单执行）。
 - 在真实运行 DSH `0.2.0-rc.2` 服务上的 active 部署结果（宿主已于 2026-09-29 升级 rc.2；本插件 0.3.5 装机后按 DESIGN 清单执行并回填本节）。
+- 在真实运行 DSH `0.2.1-rc.1` 服务上的 active 部署结果（宿主升级 0.2.1 后按 DESIGN 清单执行并回填；届时 §7.7 同步补 web 零回归断言）。
 
 已知无关问题（非本插件职责，记录备查）：同宿主上第三方插件对 0.1.7 的不适配——`dsh-auth` 的 `/auth/login` 在 edge 请求下因 `ctx.settings.get()`（其源码自注的 rc.1 shim）对 0.1.7 settings API 抛 TypeError；`modsearch` 报 `scope.settings.register is not a function`（同一 settings API 变化）；`copilot-authorization` 与官方 `dsh-authorization` 服务重名冲突。定性依据：dsh-auth 代码不依赖 connection 服务（登录页渲染路径无 connection 消费）；该 TypeError 首次出现于 2026-09-26 宿主升级 0.1.7 之后，与本插件激活无关（升级后至插件激活前 `/auth/login` 零访问，TypeError 首次触发于插件激活 51 秒后的 edge 请求，与同 boot 的 modsearch/settings 报错同源）。未做卸载态下的 edge 复现差分。
 

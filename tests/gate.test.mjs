@@ -14,6 +14,7 @@ import {
   GATE_PROFILE_EXPRESSION,
   GATE_PROBE_EXPRESSION,
   GATE_ROW_ALLOWED_EXPRESSION,
+  GATE_ROW_ALLOWED_EXPRESSION_V4,
   evaluateGate,
   resolveCompatibilityProfile,
 } from '../lib/gate.js'
@@ -67,8 +68,8 @@ test('gate constants have the pinned profile and anchor values', () => {
   assert.equal(CONNECTION_PACKAGE, '@deepseek-ai/dsh-client-connection')
   assert.equal(GATE_RUNTIME_PACKAGE, '@deepseek-ai/dsh')
   assert.equal(GATE_VERSION, '0.1.2-rc.1')
-  assert.deepEqual([...GATE_VERSIONS], ['0.1.2-rc.1', '0.1.5-rc.1', '0.1.5-rc.2', '0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2'])
-  assert.deepEqual(COMPATIBILITY_PROFILES.map(profile => profile.id), ['legacy-web-v1', 'carrier-neutral-v2', 'carrier-neutral-v3'])
+  assert.deepEqual([...GATE_VERSIONS], ['0.1.2-rc.1', '0.1.5-rc.1', '0.1.5-rc.2', '0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-rc.1'])
+  assert.deepEqual(COMPATIBILITY_PROFILES.map(profile => profile.id), ['legacy-web-v1', 'carrier-neutral-v2', 'carrier-neutral-v3', 'carrier-neutral-v4'])
   // 锚点顺序：宿主 runtime 本体在前（版本段即宿主版本），被替换对象在后。
   assert.deepEqual([...GATE_ANCHOR_PACKAGES], ['@deepseek-ai/dsh', '@deepseek-ai/dsh-client-connection'])
   // 宿主 profile 门控（2026-10-07）：desktop 信号包常量与 web-only 策略。
@@ -86,6 +87,7 @@ test('compatibility profiles match complete runtime/connection pairs only', () =
   assert.equal(resolveCompatibilityProfile('0.1.7-rc.2', '0.1.7-rc.2')?.id, 'carrier-neutral-v3')
   assert.equal(resolveCompatibilityProfile('0.2.0-rc.1', '0.2.0-rc.1')?.id, 'carrier-neutral-v3')
   assert.equal(resolveCompatibilityProfile('0.2.0-rc.2', '0.2.0-rc.2')?.id, 'carrier-neutral-v3')
+  assert.equal(resolveCompatibilityProfile('0.2.1-rc.1', '0.2.1-rc.1')?.id, 'carrier-neutral-v4')
   // 同代际内的跨 patch 版本混合同样是事故形态，必须 dormant。
   assert.equal(resolveCompatibilityProfile('0.1.2-rc.1', '0.1.5-rc.1'), undefined)
   assert.equal(resolveCompatibilityProfile('0.1.5-rc.1', '0.1.2-rc.1'), undefined)
@@ -108,6 +110,14 @@ test('compatibility profiles match complete runtime/connection pairs only', () =
   assert.equal(resolveCompatibilityProfile('0.1.7-rc.2', '0.2.0-rc.2'), undefined)
   assert.equal(resolveCompatibilityProfile('0.2.0-rc.2', '0.1.7-rc.1'), undefined)
   assert.equal(resolveCompatibilityProfile('0.2.0-rc.2', '0.1.7-rc.2'), undefined)
+  // 跨代际混合（0.2.0 ↔ 0.2.1-rc.1 任一方向）：0.2.1 是真实契约变化（§5.8），
+  // 与 0.2.0 绝不放行混合，白名单只认完整版本对。
+  assert.equal(resolveCompatibilityProfile('0.2.0-rc.1', '0.2.1-rc.1'), undefined)
+  assert.equal(resolveCompatibilityProfile('0.2.0-rc.2', '0.2.1-rc.1'), undefined)
+  assert.equal(resolveCompatibilityProfile('0.2.1-rc.1', '0.2.0-rc.1'), undefined)
+  assert.equal(resolveCompatibilityProfile('0.2.1-rc.1', '0.2.0-rc.2'), undefined)
+  assert.equal(resolveCompatibilityProfile('0.1.7-rc.2', '0.2.1-rc.1'), undefined)
+  assert.equal(resolveCompatibilityProfile('0.2.1-rc.1', '0.1.7-rc.2'), undefined)
   // 跨代际混合同理（0.1.5 ↔ 0.1.7/0.2.0 任一方向）。
   assert.equal(resolveCompatibilityProfile('0.1.5-rc.2', '0.1.7-rc.2'), undefined)
   assert.equal(resolveCompatibilityProfile('0.1.7-rc.2', '0.1.5-rc.2'), undefined)
@@ -147,6 +157,10 @@ test('profile expression recognizes exact pairs and active probes', async (t) =>
     runtimeVersion: '0.2.0-rc.2',
     connectionVersion: '0.2.0-rc.2',
   })
+  const rc211 = await writeGateFixtures(t, {
+    runtimeVersion: '0.2.1-rc.1',
+    connectionVersion: '0.2.1-rc.1',
+  })
   assert.equal(evaluateWith(probeCtx(rc1.urls), GATE_PROFILE_EXPRESSION), 'legacy-web-v1')
   assert.equal(evaluateWith(probeCtx(rc1.urls), GATE_PROBE_EXPRESSION), true)
   assert.equal(evaluateWith(probeCtx(rc15.urls), GATE_PROFILE_EXPRESSION), 'carrier-neutral-v2')
@@ -161,10 +175,13 @@ test('profile expression recognizes exact pairs and active probes', async (t) =>
   assert.equal(evaluateWith(probeCtx(rc20.urls), GATE_PROBE_EXPRESSION), true)
   assert.equal(evaluateWith(probeCtx(rc202.urls), GATE_PROFILE_EXPRESSION), 'carrier-neutral-v3')
   assert.equal(evaluateWith(probeCtx(rc202.urls), GATE_PROBE_EXPRESSION), true)
+  assert.equal(evaluateWith(probeCtx(rc211.urls), GATE_PROFILE_EXPRESSION), 'carrier-neutral-v4')
+  assert.equal(evaluateWith(probeCtx(rc211.urls), GATE_PROBE_EXPRESSION), true)
   assert.equal(evaluateGate(probeCtx(rc17.urls)), true)
   assert.equal(evaluateGate(probeCtx(rc171.urls)), true)
   assert.equal(evaluateGate(probeCtx(rc20.urls)), true)
   assert.equal(evaluateGate(probeCtx(rc202.urls)), true)
+  assert.equal(evaluateGate(probeCtx(rc211.urls)), true)
 })
 
 test('profile expression rejects mixed and unknown pairs', async (t) => {
@@ -207,6 +224,16 @@ test('profile expression rejects mixed and unknown pairs', async (t) => {
     runtimeVersion: '0.2.0-rc.2',
     connectionVersion: '0.2.0-rc.1',
   })
+  // 跨代际混合（0.2.0 ↔ 0.2.1-rc.1 任一方向）：§5.8 定谳的真实契约变化，
+  // 混合对必须 dormant（carrier-neutral-v3 与 v4 绝不混跑）。
+  const crossGeneration21 = await writeGateFixtures(t, {
+    runtimeVersion: '0.2.0-rc.2',
+    connectionVersion: '0.2.1-rc.1',
+  })
+  const crossGeneration21Reverse = await writeGateFixtures(t, {
+    runtimeVersion: '0.2.1-rc.1',
+    connectionVersion: '0.2.0-rc.2',
+  })
   const unknown = await writeGateFixtures(t, {
     runtimeVersion: '9.9.9',
     connectionVersion: '9.9.9',
@@ -229,6 +256,10 @@ test('profile expression rejects mixed and unknown pairs', async (t) => {
   assert.equal(evaluateWith(probeCtx(crossPatch20.urls), GATE_PROBE_EXPRESSION), false)
   assert.equal(evaluateWith(probeCtx(crossPatch20Reverse.urls), GATE_PROFILE_EXPRESSION), null)
   assert.equal(evaluateWith(probeCtx(crossPatch20Reverse.urls), GATE_PROBE_EXPRESSION), false)
+  assert.equal(evaluateWith(probeCtx(crossGeneration21.urls), GATE_PROFILE_EXPRESSION), null)
+  assert.equal(evaluateWith(probeCtx(crossGeneration21.urls), GATE_PROBE_EXPRESSION), false)
+  assert.equal(evaluateWith(probeCtx(crossGeneration21Reverse.urls), GATE_PROFILE_EXPRESSION), null)
+  assert.equal(evaluateWith(probeCtx(crossGeneration21Reverse.urls), GATE_PROBE_EXPRESSION), false)
   assert.equal(evaluateWith(probeCtx(unknown.urls), GATE_PROFILE_EXPRESSION), null)
   assert.equal(evaluateWith(probeCtx(unknown.urls), GATE_PROBE_EXPRESSION), false)
 })
@@ -439,6 +470,36 @@ test('row gate does not depend on the root Loader resolve', async (t) => {
   const noRootResolveCtx = rowCtx(officialRow(), urls)
   delete noRootResolveCtx.loader.resolve
   assert.equal(evaluateWith(noRootResolveCtx, GATE_ROW_ALLOWED_EXPRESSION), true)
+})
+
+test('row bindings partition generations: the legacy row never fires on a v4 pair and vice versa', async (t) => {
+  // §5.9 两行拆分的不变量：同一 pair fixture 上，webRuntime 行（≤0.2.0）与
+  // webStartup 行（0.2.1+）的放行集合必须互斥——0.2.1 宿主上旧行若放行，其
+  // inject 的 webRuntime 服务在上游已不存在。
+  const v3Pair = await writeGateFixtures(t, {
+    runtimeVersion: '0.2.0-rc.2',
+    connectionVersion: '0.2.0-rc.2',
+  })
+  const v4Pair = await writeGateFixtures(t, {
+    runtimeVersion: '0.2.1-rc.1',
+    connectionVersion: '0.2.1-rc.1',
+  })
+  // v3 pair：旧行放行、v4 行拒绝。
+  const legacyOnV3 = rowCtx(officialRow(), v3Pair.urls)
+  assert.equal(evaluateWith(legacyOnV3, GATE_ROW_ALLOWED_EXPRESSION), true)
+  assert.equal(evaluateWith(legacyOnV3, GATE_ROW_ALLOWED_EXPRESSION_V4), false)
+  // v4 pair：v4 行放行、旧行拒绝。
+  const v4OnV4 = rowCtx(officialRow(), v4Pair.urls)
+  assert.equal(evaluateWith(v4OnV4, GATE_ROW_ALLOWED_EXPRESSION_V4), true)
+  assert.equal(evaluateWith(v4OnV4, GATE_ROW_ALLOWED_EXPRESSION), false)
+  // 更早代际（0.1.x）：v4 行一律拒绝。
+  const legacyV2 = await writeGateFixtures(t, {
+    runtimeVersion: '0.1.7-rc.2',
+    connectionVersion: '0.1.7-rc.2',
+  })
+  const earlyCtx = rowCtx(officialRow(), legacyV2.urls)
+  assert.equal(evaluateWith(earlyCtx, GATE_ROW_ALLOWED_EXPRESSION), true)
+  assert.equal(evaluateWith(earlyCtx, GATE_ROW_ALLOWED_EXPRESSION_V4), false)
 })
 
 test('real installed layout resolves through a pnpm version segment (pnpm-only; Task 11 covers the real machine)', (t) => {

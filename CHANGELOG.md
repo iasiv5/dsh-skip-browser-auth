@@ -4,10 +4,14 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
-## [Unreleased]
+## [0.4.0] - 2026-10-17
 
-- **兼容性审计：DSH `0.2.1-rc.1` 判为契约变化（CONTRACT-CHANGED），未收编白名单**——0.2.1 宿主上插件自动休眠、官方行为分毫不变（设计内安全态）。替换面实质重构：connection 的 `OperatorPeer`→`Peer` 重构、新增 `/connect` 通道、bridge 签名新增 `admission.peer`、client bundle 拆分 browser/node、官方 patch connection 行 `webRuntime`→`webStartup`、scope 剥离 invariants（该包 0.2.1 线停发）。逐包证据与 v4 影响面清单见 docs/COMPATIBILITY.md §5.8；新代际待按 §5.2 立项
+- **新增 DSH `0.2.1-rc.1` 支持（新代际 `carrier-neutral-v4`，非白名单追加）**：`npm run audit-candidate` 契约审计定谳 0.2.1 为真实契约变化（CONTRACT-CHANGED，docs/COMPATIBILITY.md §5.8），按 §5.2 立项实现新代际——新 host adapter `carrier-neutral-021`（`admit()` → 瀑布 → `admission.peer` 透传 bridge + 新 `/connect` 交换通道 + 代际 seam 守卫）、新 `rc21` client variant（锚定 0.2.1 官方 browser 入口 `lib/client.browser.js`）、bundle patch 双行代际拆分（`trusted-connection` 服务 ≤0.2.0 / `trusted-connection-021` 服务 0.2.1+，webRuntime/webStartup 互斥绑定，逐字对齐官方 patch connection 行的同款迁移）、trusted-auth 四方法 stub（新增 `authorizeConnect` 交换：interactions 校验逐字对齐 + 官方成功重定向形态，无身份 cookie）
+- §5.8 审计证据要点：connection `OperatorPeer`→`Peer`（peer 台账/principal）重构、bridge 签名新增 `admission.peer`、client bundle 拆分 browser/node、官方 patch `webRuntime`→`webStartup`、scope 剥离 invariants（该包 0.2.1 线停发）；`HostConnectionService` 构造器签名未变
+- 测试：真实 0.2.1-rc.1 npm fixture 组合全套（full active checklist、`/connect` 302/400/403、跨代际混合双向 dormant、行代际分区）+ npm flat 回退用例 + gate/patch 结构断言；全量 177 跑 176 过 0 败 1 skip
+- **实机 active checklist 待宿主升级 0.2.1 后按 DESIGN 清单执行并回填**（§5.9 第 6 条）；0.2.1 宿主上旧版插件保持安静休眠（官方行为不变）
 - 审计脚本 `audit-candidate.mjs` 新增 `missing-in-candidate` 定级：锚点包候选版未发布于 npm 时给出机器初判（至多 REPUBLISH-WITH-REVIEW）而非硬崩；`npm pack --silent` 会吞 ETARGET 错误行，失败后改以不带 `--silent` 的 `npm view` 复核定性
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`
 
 ## [0.3.12] - 2026-10-11
 
@@ -115,7 +119,8 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.12...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.12...v0.4.0
 [0.3.12]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.11...v0.3.12
 [0.3.11]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.10...v0.3.11
 [0.3.10]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.9...v0.3.10

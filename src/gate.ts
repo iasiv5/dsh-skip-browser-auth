@@ -69,6 +69,7 @@
 
 import {
   ACTIVE_COMPATIBILITY_PROFILE_IDS,
+  CARRIER_NEUTRAL_V4_PROFILE_ID,
   GATE_PROFILE_TABLE,
   type HostProfile,
 } from './compatibility.js'
@@ -118,10 +119,24 @@ export const GATE_PROFILE_EXPRESSION = `(() => { try { const internal = ctx.load
 // A known candidate profile remains dormant until its host/client adapter is
 // promoted, while the profile expression still exposes its exact pair id.
 export const GATE_PROBE_EXPRESSION = `(() => { try { const profile = (${GATE_PROFILE_EXPRESSION}); return profile !== null && ${JSON.stringify(ACTIVE_COMPATIBILITY_PROFILE_IDS)}.includes(profile); } catch (gateError) { return false; } })()`
-// 行绑定放行：自身探针为真 + 同组 sibling 存在且名字匹配且其 effective disabled 为真。
+// 行绑定放行表达式源（0.4.0 起按代际拆分）：自身探针解析出的 profile 落在
+// allowedProfileIds 内 + 同组 sibling 存在且名字匹配且其 effective disabled 为真。
 // sibling 必须从当前 entry（Symbol.for('cordis.entry')）所属子树解析，
 // 根 Loader 的 resolve 看不到 Include 子树内的行。
-export const GATE_ROW_ALLOWED_EXPRESSION = `(() => { try { const self = ctx[Symbol.for('cordis.entry')]; if (!self || !self.parent || !self.parent.tree) return false; const official = self.parent.tree.resolve('connection'); if (!official || official.parent !== self.parent) return false; if (official.options.id !== 'connection' || official.options.name !== '${CONNECTION_PACKAGE}') return false; const probeAllowed = (${GATE_PROBE_EXPRESSION}); if (probeAllowed !== true) return false; return official.disabled === true; } catch (gateError) { return false; } })()`
+//
+// 为什么按代际拆分（§5.9）：bundle patch 现在插入两行（webRuntime 行服务
+// ≤0.2.0 代际、webStartup 行服务 0.2.1+ 代际），两个 id 集合必须互斥——否则
+// 新代际宿主上旧行也会放行（其 inject 的 webRuntime 服务在上游已不存在）。
+// 两个集合由 compatibility.ts 单表派生，不会漂移。
+function rowAllowedExpressionSource(allowedProfileIds: readonly string[]): string {
+  return `(() => { try { const self = ctx[Symbol.for('cordis.entry')]; if (!self || !self.parent || !self.parent.tree) return false; const official = self.parent.tree.resolve('connection'); if (!official || official.parent !== self.parent) return false; if (official.options.id !== 'connection' || official.options.name !== '${CONNECTION_PACKAGE}') return false; const profile = (${GATE_PROFILE_EXPRESSION}); if (profile === null || !${JSON.stringify(allowedProfileIds)}.includes(profile)) return false; return official.disabled === true; } catch (gateError) { return false; } })()`
+}
+/** ≤0.2.0 代际的行绑定（webRuntime 行）：active 集合排除 v4。 */
+export const GATE_ROW_ALLOWED_EXPRESSION = rowAllowedExpressionSource(
+  ACTIVE_COMPATIBILITY_PROFILE_IDS.filter((id) => id !== CARRIER_NEUTRAL_V4_PROFILE_ID),
+)
+/** 0.2.1+ 代际（carrier-neutral-v4）的行绑定（webStartup 行）：仅 v4。 */
+export const GATE_ROW_ALLOWED_EXPRESSION_V4 = rowAllowedExpressionSource([CARRIER_NEUTRAL_V4_PROFILE_ID])
 
 /**
  * Evaluate the activation probe against a loader context scope.

@@ -61,10 +61,13 @@ export function rawRequest(port, { path, method = 'GET', headers = {}, body } = 
  * @param options.layout - 探针 fixture 布局：'pnpm'（默认，路径段带版本）或
  *   'npm'（扁平 node_modules，URL 无版本段 → 探针走 manifest 回退，dshm 部署形态）。
  * @param options.extraPatches - 追加在本插件 patch 之后的覆盖层（模拟后续 patch 层）。
- * @param options.webRuntime - 提供给 `ctx.webRuntime` 的服务值。
+ * @param options.webRuntime - 提供给 `ctx.webRuntime` 的服务值（≤0.2.0 代际行消费）。
+ * @param options.webStartup - 提供给 `ctx.webStartup` 的服务值（0.2.1+ 代际行消费；
+ *   默认 `{ trustedHosts: [] }`。两个服务恒同时供给：任何一代宿主上另一代行都处于
+ *   disabled（行绑定 id 集合互斥），多余的服务供给无害）。
  * @returns context、服务端口与临时根目录。
  */
-export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, runtimeVersion, desktopHost = false, layout = 'pnpm', extraPatches = [], webRuntime } = {}) {
+export async function compose(t, { rows, modules = {}, probeVersion, manifestVersion, runtimeVersion, desktopHost = false, layout = 'pnpm', extraPatches = [], webRuntime, webStartup } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'dsh-sba-compose-'))
 
   // 真实探针 fixture：pnpm 布局为 gate-fixture/<pnpm 风格路径段>/…（段含版本），
@@ -152,6 +155,7 @@ export async function compose(t, { rows, modules = {}, probeVersion, manifestVer
     }
   })
   context.provide('webRuntime', webRuntime ?? { lanAddresses: [], trustedHosts: [] })
+  context.provide('webStartup', webStartup ?? { trustedHosts: [] })
   await context.plugin(Loader)
   context.loader.builtins.include = Include
   const repoRequire = createRequire(import.meta.url)

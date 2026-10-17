@@ -27,9 +27,11 @@ export interface FetchHandler {
   /**
    * Handle one standard Fetch request.
    * @param request - request produced by the active transport bridge.
+   * @param peer - 0.2.1 admission Peer threaded through by the v4 bridge;
+   *   absent on earlier generations whose handlers ignore it.
    * @returns complete or streaming Fetch response.
    */
-  fetch(request: Request): Promise<Response>
+  fetch(request: Request, peer?: unknown): Promise<Response>
 }
 
 /**
@@ -45,6 +47,34 @@ export async function bridge(
   res: ServerResponse,
   apiHandler: FetchHandler,
   maxRequestBodyBytes: number = DEFAULT_MAX_REQUEST_BODY_BYTES,
+): Promise<void> {
+  return bridgeRequest(req, res, apiHandler, undefined, maxRequestBodyBytes)
+}
+
+/**
+ * 0.2.1 (carrier-neutral-021) bridge: identical to {@link bridge} except the
+ * admission Peer is threaded into the handler call, replicating the official
+ * `bridge(req, res, fetchHandler, admission.peer, maxRequestBodyBytes)` wiring
+ * (the peer lands in RPC handler slot 4 and gates exact Fetch routes to
+ * owner-principal peers). Generations never cross: the v3 adapter keeps
+ * calling {@link bridge}.
+ */
+export async function bridgeWithPeer(
+  req: IncomingMessage,
+  res: ServerResponse,
+  apiHandler: FetchHandler,
+  peer: unknown,
+  maxRequestBodyBytes: number = DEFAULT_MAX_REQUEST_BODY_BYTES,
+): Promise<void> {
+  return bridgeRequest(req, res, apiHandler, peer, maxRequestBodyBytes)
+}
+
+async function bridgeRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  apiHandler: FetchHandler,
+  peer: unknown,
+  maxRequestBodyBytes: number,
 ): Promise<void> {
   const abort = new AbortController()
   // Client-disconnect detection MUST hang off the response, not the request:
@@ -100,7 +130,7 @@ export async function bridge(
       duplex: 'half',
     } as RequestInit & { duplex: 'half' })
   }
-  const response = await apiHandler.fetch(request)
+  const response = await apiHandler.fetch(request, peer)
   const requestUnread = bodyMode === 'streaming' && !req.readableEnded
   const responseHeaders = Object.fromEntries(response.headers.entries())
   res.writeHead(response.status, requestUnread

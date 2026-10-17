@@ -14,7 +14,14 @@ export interface HostAdapterInput {
 
 export interface HostRuntime {
   readonly connection: RuntimeConnection
+  /** The primary carrier route (the shared `/api` prefix in every generation). */
   readonly route: WebRoute
+  /**
+   * Generation-specific extra routes registered after the primary one, in
+   * official apply() order. 0.2.1 (carrier-neutral-021) adds the exact
+   * `/connect` channel; earlier generations leave this empty.
+   */
+  readonly additionalRoutes?: readonly WebRoute[]
   readonly fetchHandler: FetchHandler
   readonly adapterId: string
 }
