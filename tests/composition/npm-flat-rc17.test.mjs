@@ -1,6 +1,6 @@
 // npm flat layout：真实 manifest fallback 激活各代际 profile。
 // 覆盖 dshm（npm 语义安装）形态下 0.1.7-rc.1/rc.2、0.2.0-rc.1/rc.2
-// （carrier-neutral-v3）与 0.2.1-rc.1（carrier-neutral-v4）的双锚点激活路径。
+// （carrier-neutral-v3）与 0.2.1-rc.1/rc.2（carrier-neutral-v4）的双锚点激活路径。
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { compose, rawRequest } from '../helpers/compose.mjs'
@@ -20,6 +20,9 @@ const WebServer202 = await import('webserver-rc202')
 const Connection211 = await import('dsh-client-connection-rc211')
 const Frontend211 = await import('frontend-static-rc211')
 const WebServer211 = await import('webserver-rc211')
+const Connection212 = await import('dsh-client-connection-rc212')
+const Frontend212 = await import('frontend-static-rc212')
+const WebServer212 = await import('webserver-rc212')
 
 const ROWS = [
   { name: '@deepseek-ai/dsh-host-webserver', config: { host: '127.0.0.1', port: 0 } },
@@ -116,6 +119,26 @@ test('0.2.1-rc.1 npm flat manifest fallback activates carrier-neutral-v4', async
       '@deepseek-ai/dsh-client-connection': Connection211,
       '@deepseek-ai/dsh-host-frontend-static': Frontend211,
       '@deepseek-ai/dsh-host-webserver': WebServer211,
+    },
+    rows: ROWS,
+  })
+  const entries = [...context.loader.entries()]
+  assert.equal(entries.find((entry) => entry.options.id === 'connection')?.disabled, true)
+  assert.equal(entries.find((entry) => entry.options.id === 'trusted-connection-021')?.disabled, false)
+  const rootGet = await rawRequest(port, { path: '/' })
+  assert.equal(rootGet.status, 200)
+  assert.match(rootGet.body, /carrier-neutral-v4/)
+})
+
+test('0.2.1-rc.2 npm flat manifest fallback activates carrier-neutral-v4', async (t) => {
+  const { context, port } = await compose(t, {
+    layout: 'npm',
+    probeVersion: '0.2.1-rc.2',
+    webStartup: { trustedHosts: [] },
+    modules: {
+      '@deepseek-ai/dsh-client-connection': Connection212,
+      '@deepseek-ai/dsh-host-frontend-static': Frontend212,
+      '@deepseek-ai/dsh-host-webserver': WebServer212,
     },
     rows: ROWS,
   })

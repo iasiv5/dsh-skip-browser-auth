@@ -133,9 +133,18 @@ export const COMPATIBILITY_PROFILES = [
     // explicit invocation authorities). The rc21 client variant anchors at the
     // official browser entry lib/client.browser.js of 0.2.1-rc.1 — no other
     // generation shares this build input.
+    //
+    // 0.2.1-rc.2 joined this generation after a tarball audit (§5.10): another
+    // rc.2-style republish on the contract face — connection/webserver/scope/
+    // frontend-static/app-boot/runtime ship manifest-only bumps, invariants
+    // remains unpublished on both sides, and web-app's whole patch diff is one
+    // ADDED row (ui-deepseek-model-label-1017) with the connection row
+    // field-identical. rc21 keeps anchoring at 0.2.1-rc.1; no second 0.2.1-line
+    // build input is introduced.
     id: 'carrier-neutral-v4',
     pairs: [
       { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
+      { runtime: '0.2.1-rc.2', connection: '0.2.1-rc.2' },
     ],
     hostAdapter: 'carrier-neutral-021',
     clientVariant: 'rc21',

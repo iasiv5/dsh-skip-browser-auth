@@ -85,6 +85,15 @@ runNpm([
   'dsh-client-connection-rc211@npm:@deepseek-ai/dsh-client-connection@0.2.1-rc.1',
   'frontend-static-rc211@npm:@deepseek-ai/dsh-host-frontend-static@0.2.1-rc.1',
   'webserver-rc211@npm:@deepseek-ai/dsh-host-webserver@0.2.1-rc.1',
+  // 0.2.1-rc.2 joined the v4 generation (docs/COMPATIBILITY.md §5.10): real
+  // packages under *-rc212 aliases exercise the second v4 pair and the
+  // same-generation cross-patch dormant negatives. Every contract-face
+  // package is manifest-only-different from its 0.2.1-rc.1 counterpart
+  // (§5.10), so sharing the hoisted scope install below has no behavior
+  // difference — same argument as the rc20/rc202/rc211 aliases.
+  'dsh-client-connection-rc212@npm:@deepseek-ai/dsh-client-connection@0.2.1-rc.2',
+  'frontend-static-rc212@npm:@deepseek-ai/dsh-host-frontend-static@0.2.1-rc.2',
+  'webserver-rc212@npm:@deepseek-ai/dsh-host-webserver@0.2.1-rc.2',
   // 0.1.7 connection 的 peer 链（repo .npmrc legacy-peer-deps=true 后 npm 不再
   // 自动安装 peer，必须显式列出）：connection → peer dsh-scope → peer
   // dsh-invariants。取 rc.2 锚点版本；rc171 别名 peer 请求 0.1.7-rc.1，

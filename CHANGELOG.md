@@ -4,6 +4,13 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.1] - 2026-10-17
+
+- 新增 DSH `0.2.1-rc.2` 支持：`npm run audit-candidate` 审计为契约面等价重发布（REPUBLISH-WITH-REVIEW）——connection/webserver/scope/frontend-static/app-boot/runtime 全部仅 manifest bump（本轮回零代码 diff），web-app patch 仅新增非 connection 行（`ui-deepseek-model-label-1017`），**connection 行逐字段一致**；按 §5.1 作为第二个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.10），未新增 adapter/client variant
+- 测试：真实 0.2.1-rc.2 npm fixture 组合套件（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）+ npm flat 回退用例 + gate/patch/manifest 断言
+- 审计脚本 `audit-candidate.mjs` 新增 missing-in-base / missing-both-sides 定级：白名单基准本身也可能停更（实证：以 0.2.1-rc.1 为基准时 invariants 两侧均无 0.2.1 线版本）——两侧均缺不构成差异、不降级判级
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`
+
 ## [0.4.0] - 2026-10-17
 
 - **新增 DSH `0.2.1-rc.1` 支持（新代际 `carrier-neutral-v4`，非白名单追加）**：`npm run audit-candidate` 契约审计定谳 0.2.1 为真实契约变化（CONTRACT-CHANGED，docs/COMPATIBILITY.md §5.8），按 §5.2 立项实现新代际——新 host adapter `carrier-neutral-021`（`admit()` → 瀑布 → `admission.peer` 透传 bridge + 新 `/connect` 交换通道 + 代际 seam 守卫）、新 `rc21` client variant（锚定 0.2.1 官方 browser 入口 `lib/client.browser.js`）、bundle patch 双行代际拆分（`trusted-connection` 服务 ≤0.2.0 / `trusted-connection-021` 服务 0.2.1+，webRuntime/webStartup 互斥绑定，逐字对齐官方 patch connection 行的同款迁移）、trusted-auth 四方法 stub（新增 `authorizeConnect` 交换：interactions 校验逐字对齐 + 官方成功重定向形态，无身份 cookie）
@@ -119,7 +126,8 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.12...v0.4.0
 [0.3.12]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.11...v0.3.12
 [0.3.11]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.10...v0.3.11

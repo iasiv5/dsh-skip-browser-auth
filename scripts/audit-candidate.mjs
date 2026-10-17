@@ -15,6 +15,7 @@
 //                           重命名、web-app patch 的非 connection 行、app-boot 的
 //                           lib 差异、或候选版某锚点包未随发/停发（npm 查无此
 //                           版本）——打印 diff 摘要，人工过目后可加 pair
+//                           （锚点包两侧均停更则不构成差异，不降级判级）
 //   CONTRACT-CHANGED        任何替换面锚点包（connection/host-webserver/scope/
 //                           invariants/frontend-static）出现代码 diff、web-app 的
 //                           connection 行漂移、chunk 重命名但内容不一致、或
@@ -257,16 +258,9 @@ function npmPack(pkg, version, dest) {
   })
 }
 
-function fetchAndExtract(pkg, version, dir) {
-  execFileSync('mkdir', ['-p', dir])
-  npmPack(pkg, version, dir)
-  const tgz = `${pkg.replace(/^@/, '').replace(/\//, '-')}-${version}.tgz`
-  execFileSync('tar', ['xzf', join(dir, tgz), '-C', dir])
-  return dir
-}
-
-/** 候选侧拉取：候选版未发布（ETARGET/E404）时返回 null（missing-in-candidate），
- * 其余失败照常抛出。基准侧仍走 fetchAndExtract——base 拉不到是执行环境问题。
+/** 拉取并解包；该版本未发布（ETARGET/E404）时返回 null，其余失败照常抛出。
+ * 基准侧与候选侧共用——白名单基准也可能停更（实证：invariants 停在 0.2.0-rc.2，
+ * 以 0.2.1-rc.1 为基准审计 rc.2 时基准侧即缺包）。
  * 注意 pack 带 --silent 时 npm 连 ETARGET 错误行都不输出，故失败后改用
  * 不带 --silent 的 npm view 复核定性（其 E404/ETARGET 文本完整）。 */
 function fetchAndExtractOrMissing(pkg, version, dir) {
@@ -320,8 +314,16 @@ async function main() {
   try {
     for (const pkg of ANCHOR_PACKAGES) {
       const slug = pkg.replace(/^@/, '').replace(/\//, '-')
-      const dirA = fetchAndExtract(pkg, base, join(work, `${slug}-a`))
+      const dirA = fetchAndExtractOrMissing(pkg, base, join(work, `${slug}-a`))
       const dirB = fetchAndExtractOrMissing(pkg, candidate, join(work, `${slug}-b`))
+      if (dirA === null && dirB === null) {
+        results.push({ name: pkg, status: 'missing-both-sides', changed: [], codeChanged: [], onlyA: [], onlyB: [], renames: [], unmatchedCode: [] })
+        continue
+      }
+      if (dirA === null) {
+        results.push({ name: pkg, status: 'missing-in-base', changed: [], codeChanged: [], onlyA: [], onlyB: [], renames: [], unmatchedCode: [] })
+        continue
+      }
       if (dirB === null) {
         results.push({ name: pkg, status: 'missing-in-candidate', changed: [], codeChanged: [], onlyA: [], onlyB: [], renames: [], unmatchedCode: [] })
         continue
@@ -357,7 +359,7 @@ async function main() {
 
     let verdict
     if (blocking.length > 0 || seamBlocked) verdict = 'CONTRACT-CHANGED'
-    else if (results.every((r) => r.status === 'identical' || r.status === 'manifest-or-docs-only')) verdict = 'RE-PUBLISH'
+    else if (results.every((r) => r.status === 'identical' || r.status === 'manifest-or-docs-only' || r.status === 'missing-both-sides')) verdict = 'RE-PUBLISH'
     else verdict = 'REPUBLISH-WITH-REVIEW'
 
     const report = { base, candidate, verdict, seam, results: results.map(({ name, status, changed, codeChanged, renames, unmatchedCode, connectionRowIdentical, codeChangedInWhitelist }) => ({ name, status, changed, codeChanged, renames, unmatchedCode, connectionRowIdentical, codeChangedInWhitelist })) }
@@ -369,6 +371,8 @@ async function main() {
         const tag = r.status === 'identical' ? '逐字节一致'
           : r.status === 'manifest-or-docs-only' ? '仅 package.json/README/docs'
           : r.status === 'missing-in-candidate' ? '候选版未发布于 npm（未随发/停发）[人工定性]'
+          : r.status === 'missing-in-base' ? '基准版未发布于 npm（恢复发布？）[人工定性]'
+          : r.status === 'missing-both-sides' ? '两侧均未发布（该线停更，无对比物）'
           : `代码差异 ${r.codeChanged.length} 个文件`
         console.log(`  ${r.name.padEnd(40)} ${tag}`)
         if (r.status === 'code-diff') {
