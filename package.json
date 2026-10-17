@@ -38,11 +38,12 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm run build",
     "test": "node --test tests/*.test.mjs tests/composition/*.test.mjs",
     "test:rc2-fixture": "node scripts/install-rc2-fixture.mjs",
     "test:rc15-fixture": "node scripts/install-rc15-fixture.mjs",
     "test:rc17-fixture": "node scripts/install-rc17-fixture.mjs",
-    "test:all": "npm run test:rc2-fixture && npm run test:rc15-fixture && npm run test:rc17-fixture && npm run build && npm run typecheck && npm test",
+    "test:all": "npm run test:rc2-fixture && npm run test:rc15-fixture && npm run test:rc17-fixture && npm run typecheck && npm test",
     "audit-candidate": "node scripts/audit-candidate.mjs",
     "prepare": "npm run build"
   },

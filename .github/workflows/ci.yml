@@ -1,0 +1,24 @@
+# CI 守卫：push/PR 必跑全量链路（fixture + build + typecheck + 全量测试）。
+# 与 publish.yml（tag 触发的 OIDC 发布）互补：绿了才允许 tag，是 018 发版纪律
+# 的前置门。fixture 安装需要 npm 网络（GitHub runner 自带）。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:all
