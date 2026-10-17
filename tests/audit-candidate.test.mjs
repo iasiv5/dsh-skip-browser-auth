@@ -13,6 +13,7 @@ import {
   classifyPackage,
   extractConnectionRow,
   isManifestOrDoc,
+  isVersionMissingError,
   parsePairs,
   pickBasePair,
 } from '../scripts/audit-candidate.mjs'
@@ -36,6 +37,19 @@ test('parsePairs reads the exact-pair table from the compatibility source', () =
     { runtime: '0.2.0-rc.2', connection: '0.2.0-rc.2' },
   ])
   assert.equal(pickBasePair(pairs).runtime, '0.2.0-rc.2')
+})
+
+test('isVersionMissingError recognizes npm version-not-found failures, not transient ones', () => {
+  // 2026-10-17 实测：npm pack 查无此版本 → ETARGET + "No matching version found"。
+  assert.equal(isVersionMissingError('npm error code ETARGET\nnpm error notarget No matching version found for @deepseek-ai/dsh-invariants@0.2.1-rc.1.'), true)
+  // npm view 对缺版本报 E404 + "No match found for version"。
+  assert.equal(isVersionMissingError('npm error code E404\nnpm error 404 No match found for version 0.2.1-rc.1'), true)
+  // 整包不存在（404 Not Found）同样按 missing 处理。
+  assert.equal(isVersionMissingError('npm error code E404\nnpm error 404 Not Found - GET https://registry.npmjs.org/@deepseek-ai/nope'), true)
+  // 网络抖动/超时不是版本缺失，必须照常抛出。
+  assert.equal(isVersionMissingError('npm error network timeout at: https://registry.npmjs.org/@deepseek-ai/dsh'), false)
+  assert.equal(isVersionMissingError(''), false)
+  assert.equal(isVersionMissingError(undefined), false)
 })
 
 test('compareVersions orders semver cores and rc pre-release numerics', () => {

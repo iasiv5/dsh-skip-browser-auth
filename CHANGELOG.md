@@ -4,6 +4,11 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [Unreleased]
+
+- **兼容性审计：DSH `0.2.1-rc.1` 判为契约变化（CONTRACT-CHANGED），未收编白名单**——0.2.1 宿主上插件自动休眠、官方行为分毫不变（设计内安全态）。替换面实质重构：connection 的 `OperatorPeer`→`Peer` 重构、新增 `/connect` 通道、bridge 签名新增 `admission.peer`、client bundle 拆分 browser/node、官方 patch connection 行 `webRuntime`→`webStartup`、scope 剥离 invariants（该包 0.2.1 线停发）。逐包证据与 v4 影响面清单见 docs/COMPATIBILITY.md §5.8；新代际待按 §5.2 立项
+- 审计脚本 `audit-candidate.mjs` 新增 `missing-in-candidate` 定级：锚点包候选版未发布于 npm 时给出机器初判（至多 REPUBLISH-WITH-REVIEW）而非硬崩；`npm pack --silent` 会吞 ETARGET 错误行，失败后改以不带 `--silent` 的 `npm view` 复核定性
+
 ## [0.3.12] - 2026-10-11
 
 - **修复 desktop 被用户层强制启用时的报错风暴（pin 覆盖收编，运行时权威休眠）**：dsh-m 插件开关 / `dsh plugin add` enable 通道按行 id 向用户 patch 层写 `- id: trusted-connection  disabled: false`，合法覆盖本插件自门控的 `!!js` disabled 表达式 ⇒ 行强制 active、apply 被调 ⇒ 0.3.11 及以前 backstop fail loud（`desktop profile not supported; disable or uninstall the plugin`），DSH Desktop 上每次开关任意插件触发热重载都弹报错（2026-10-11 Windows 实机实录）
@@ -110,7 +115,8 @@
 - 精确版本对门控 + 自门控 bundle patch：版本不匹配 / 解析失败自动休眠，官方行为分毫不变
 - 兼容 DSH：`0.1.2-rc.1`
 
-[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.11...HEAD
+[Unreleased]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.12...HEAD
+[0.3.12]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.11...v0.3.12
 [0.3.11]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.10...v0.3.11
 [0.3.10]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.9...v0.3.10
 [0.3.9]: https://github.com/iasiv5/dsh-skip-browser-auth/compare/v0.3.8...v0.3.9

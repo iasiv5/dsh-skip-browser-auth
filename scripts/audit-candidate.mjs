@@ -13,7 +13,8 @@
 //   REPUBLISH-WITH-REVIEW   差异全部落在已知良性区：runtime 的 Desktop 插件管理
 //                           CLI（lib/bin.js、lib/types/*）、内容一致的 chunk 哈希
 //                           重命名、web-app patch 的非 connection 行、app-boot 的
-//                           lib 差异——打印 diff 摘要，人工过目后可加 pair
+//                           lib 差异、或候选版某锚点包未随发/停发（npm 查无此
+//                           版本）——打印 diff 摘要，人工过目后可加 pair
 //   CONTRACT-CHANGED        任何替换面锚点包（connection/host-webserver/scope/
 //                           invariants/frontend-static）出现代码 diff、web-app 的
 //                           connection 行漂移、chunk 重命名但内容不一致、或
@@ -230,6 +231,15 @@ export function loaderSeamReport(extractedA, extractedB, renames) {
   return { checked: seamRenames.length, reports }
 }
 
+/** 识别「该版本不存在于 npm」类失败（ETARGET / No matching version found / 404）。
+ * 与网络抖动、权限等瞬时失败区分：只有前者才允许按 missing-in-candidate 降级。 */
+export function isVersionMissingError(stderr) {
+  const text = String(stderr)
+  return /\bETARGET\b/.test(text)
+    || /No matching version found/i.test(text)
+    || /\bE404\b/.test(text)
+}
+
 function npmPack(pkg, version, dest) {
   // 跨平台 npm 调用：Windows 上 spawnSync 禁止直接起 .cmd（CVE-2024-27980，
   // EINVAL），改为 node <npm-cli.js> 直启。注意 mkdir/tar 两处仍是 Unix 命令，
@@ -250,6 +260,32 @@ function npmPack(pkg, version, dest) {
 function fetchAndExtract(pkg, version, dir) {
   execFileSync('mkdir', ['-p', dir])
   npmPack(pkg, version, dir)
+  const tgz = `${pkg.replace(/^@/, '').replace(/\//, '-')}-${version}.tgz`
+  execFileSync('tar', ['xzf', join(dir, tgz), '-C', dir])
+  return dir
+}
+
+/** 候选侧拉取：候选版未发布（ETARGET/E404）时返回 null（missing-in-candidate），
+ * 其余失败照常抛出。基准侧仍走 fetchAndExtract——base 拉不到是执行环境问题。
+ * 注意 pack 带 --silent 时 npm 连 ETARGET 错误行都不输出，故失败后改用
+ * 不带 --silent 的 npm view 复核定性（其 E404/ETARGET 文本完整）。 */
+function fetchAndExtractOrMissing(pkg, version, dir) {
+  execFileSync('mkdir', ['-p', dir])
+  try {
+    npmPack(pkg, version, dir)
+  } catch (error) {
+    try {
+      execFileSync('npm', ['view', `${pkg}@${version}`, 'version'], {
+        cwd: ROOT,
+        stdio: ['ignore', 'ignore', 'pipe'],
+      })
+      // view 查得到 = pack 失败是瞬时问题，不掩盖。
+      throw error
+    } catch (viewError) {
+      if (viewError !== error && isVersionMissingError(viewError.stderr)) return null
+      throw error
+    }
+  }
   const tgz = `${pkg.replace(/^@/, '').replace(/\//, '-')}-${version}.tgz`
   execFileSync('tar', ['xzf', join(dir, tgz), '-C', dir])
   return dir
@@ -285,7 +321,11 @@ async function main() {
     for (const pkg of ANCHOR_PACKAGES) {
       const slug = pkg.replace(/^@/, '').replace(/\//, '-')
       const dirA = fetchAndExtract(pkg, base, join(work, `${slug}-a`))
-      const dirB = fetchAndExtract(pkg, candidate, join(work, `${slug}-b`))
+      const dirB = fetchAndExtractOrMissing(pkg, candidate, join(work, `${slug}-b`))
+      if (dirB === null) {
+        results.push({ name: pkg, status: 'missing-in-candidate', changed: [], codeChanged: [], onlyA: [], onlyB: [], renames: [], unmatchedCode: [] })
+        continue
+      }
       results.push(classifyPackage(pkg, dirA, dirB))
     }
     const runtime = results.find((r) => r.name === '@deepseek-ai/dsh')
@@ -328,6 +368,7 @@ async function main() {
       for (const r of results) {
         const tag = r.status === 'identical' ? '逐字节一致'
           : r.status === 'manifest-or-docs-only' ? '仅 package.json/README/docs'
+          : r.status === 'missing-in-candidate' ? '候选版未发布于 npm（未随发/停发）[人工定性]'
           : `代码差异 ${r.codeChanged.length} 个文件`
         console.log(`  ${r.name.padEnd(40)} ${tag}`)
         if (r.status === 'code-diff') {

@@ -311,6 +311,34 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 第 6 条（真实 DSH `0.2.0-rc.2` 宿主 active checklist）随本机宿主当日升级（0.2.0-rc.1 → 0.2.0-rc.2）按 DESIGN 清单执行并留档。
 
+### 5.8 审计记录：`0.2.1-rc.1` 判为 CONTRACT-CHANGED，不加 pair（2026-10-17）
+
+结论：**`0.2.1-rc.1` 未通过 §5.1，按 §5.2 需要新代际**（新 host adapter + 新 client variant + patch 模板适配）。本轮**不加 pair**：插件在 0.2.1 宿主上继续自动休眠（fail-closed，官方 BrowserAuth 行为分毫不变——这是设计内的安全态，不是故障）。
+
+审计方法：`npm run audit-candidate -- 0.2.1-rc.1`（基准 `0.2.0-rc.2`，机器初判 CONTRACT-CHANGED，退出码 3）。脚本本轮新增 `missing-in-candidate` 定级（`@deepseek-ai/dsh-invariants` 在 0.2.1 线**从未发布**，`npm pack` 报 ETARGET——`--silent` 会吞掉错误行，失败后须以不带 `--silent` 的 `npm view` 复核定性）。锚点包逐包结果：
+
+| 包 | 0.2.0-rc.2 → 0.2.1-rc.1 差异 | 判定 |
+| --- | --- | --- |
+| `@deepseek-ai/dsh-client-connection`（被替换对象 + client variant 源） | `lib/index.js` **488 行 diff**：`OperatorPeer` 改名/重构为 **`Peer`**（`types/operator-peer.d.ts` → `types/peer.d.ts`，新增 `peers` Map 台账/`ownsSocket`/`admitConnection()`/release-dispose 语义）；新增 **`CONNECT_PATH = "/connect"`** 导出与 exact route（`connection.authorizeConnect(req, res)`，socket 连接协议：`types/connect-protocol.d.ts`、`types/client/socket.d.ts`）；官方共享路由的 bridge 调用签名变化：`bridge(req, res, fetchHandler, maxRequestBodyBytes)` → `bridge(req, res, fetchHandler, **admission.peer**, maxRequestBodyBytes)`；`lib/client.js` 拆分为 **`lib/client.browser.js`（60601B）+ `lib/client.node.js`**；新增 `locale/`。`HostConnectionService` 构造器签名 `(ctx, trustedHosts, browserAuth)` **未变** | **替换面实质重构 [阻断]** |
+| `@deepseek-ai/dsh-host-webserver`（DI/web carrier 契约） | `lib/index.js` 338 行 diff（无 `webRuntime`/`webStartup` 字样——改名不在本包） | 代码 diff [阻断] |
+| `@deepseek-ai/dsh-scope`（v3 准入来源） | **剥离 invariants**：`lib/invariant.js`、`lib/types/invariant.d.ts` 删除；package.json 移除 `@deepseek-ai/dsh-invariants` 依赖 | 代码 diff [阻断] |
+| `@deepseek-ai/dsh-invariants` | 0.2.1 线未发布于 npm（0.2.0-rc.2 后停更；scope 已同步移除其依赖） | missing-in-candidate [人工定性：随 scope 剥离，属同一重构] |
+| `@deepseek-ai/dsh-host-frontend-static` | 仅 package.json/README/docs | 无阻断 |
+| `@deepseek-ai/dsh-app-boot`（boot 层） | `lib/index.js` + profile-resolution 类型重排；新增 `types/official-bundles*.d.ts` 三件 | REVIEW（无替换面语义，但本轮随整体不收编） |
+| `@deepseek-ai/dsh-web-app`（浏览器壳 + 官方 patch） | **connection 行漂移**：`inject: [webRuntime]` → `[webStartup]`、`trustedHosts: !!js ctx.webRuntime.trustedHosts` → `ctx.webStartup.trustedHosts`（注释并声明「listener 的 bind IP 单独接受，不在本表」）；`lib/startup.js`、`types/startup.d.ts`、四个 presets patch 变化；新增 `lib/public-url-*.js` chunk 与 `locale/startup/` | **connection 行漂移 [阻断]** |
+| `@deepseek-ai/dsh`（runtime 本体） | `lib/profile-boot.js`、`types/{dump-config,dump-config-schema,args,profile-boot}.d.ts` 越出 Desktop CLI/types 良性白名单；4 个 chunk 哈希重命名且内容有差异（`plugin-`/`profile-boot-`/`dump-config*`，loader seam 抽查 `resolveSync` 用法逐行一致） | runtime diff 越出白名单 [阻断] |
+
+即 0.2.1-rc.1 是 0.1.x→0.2.0 之后的**第二次实质契约演进**（connection 半区的 Peer/连接协议重构 + web app 层 `webRuntime`→`webStartup`），不是 0.2.0-rc.1/rc.2 型的依赖对齐重发布。§5.1 第 1–3 条多条不满足；第 4–6 条未执行（前置第 1–3 条已不成立）。
+
+对 §5.2 新代际（`carrier-neutral-v4`，命名届时定）的影响面事实清单：
+
+1. **host adapter**：官方 `/api` 路由 handler 须复刻 `admit()` → waterfall → `bridge(req, res, fetchHandler, admission.peer, maxRequestBodyBytes)` 新签名；官方另挂 `/connect` exact route（`authorizeConnect`）——Replacement 是否复刻该通道须在 v4 设计中决策（BrowserAuth 替换范围随之扩大）；`admit()`/`createSharedFetchHandler`/构造器签名延续，v3 的三处 seam 检查形态仍可沿用作代际守卫（`admit` 存在性不足以区分 v3/v4，需新增锚点如 `CONNECT_PATH`/`authorizeConnect`）。
+2. **patch 模板**：`trusted-connection` 行的 `config.trustedHosts` 表达式在 0.2.1 宿主须读 `ctx.webStartup.trustedHosts`（`webRuntime` 停用）；单一静态 patch 服务多代际 ⇒ 表达式须跨代际防御（try/catch 或 `??` 回退，沿用探针同款纪律），并吸收「bind IP 单独接受」的 trustedHosts 语义变化。
+3. **client variant**：官方 browser bundle 内容变化且拆分（browser/node 两件），rc17 变体不能再服务 0.2.1 ⇒ 新 variant 锚定 0.2.1-rc.1 的 `lib/client.browser.js`（fixture 别名 `*-rc211`；devDependencies 继续零锚点，构建输入单一来源纪律不变）。
+4. **scope 链**：0.2.1 的 connection 仍 peer `dsh-scope@0.2.1-rc.1`，但其已无 invariants 下挂——v4 fixture 的 rc211 别名共享 scope 安装时不再需要 invariants。
+
+0.2.1 宿主上现版本插件的行为：双锚点 `0.2.1-rc.1` 不在白名单 ⇒ 探针 `null` ⇒ 官方行 enabled、trusted 行 disabled，安静休眠（判别法同 know-how 016）。**勿在 0.2.1 宿主上 pin `trusted-connection` 行**（0.3.12 的 apply 权威判别会拦住 desktop，但 web 上 pinned 行的 `ctx.webRuntime.trustedHosts` 组合层风险未验，v4 落地前不做该形态）。
+
 ## 6. 当前验证状态
 
 已通过：
