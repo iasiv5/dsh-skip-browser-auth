@@ -155,6 +155,24 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 > 片段；第 4–6 条（gate/混合负例、真实 fixture 组合测试、实机 active checklist）
 > 仍必须人工完成。判级依据与本节各审计记录的人工判据一致。
 
+### 5.0 republish 收编触点清单（§5.1 路径的文件级 runbook；2026-10-24 `0.2.1-rc.3` 轮实证）
+
+> 适用范围：§5.1 收编（republish 族，追加 pair 即可）。CONTRACT-CHANGED 走 §5.2 新代际，需另建 adapter/client variant 与 bundle patch 行，触点是本清单的超集，不适用。`lib/` 与仓库根 `cordis.patch.yml` 是 `npm run build` 的产物，永远不手改。别名约定：rc.NXX = 新版本去点紧凑别名（0.2.1-rc.3 → rc213，先例 rc152/rc171/rc20/rc202/rc211/rc212）。
+
+按序核对：
+
+1. `npm run audit-candidate -- <candidate>` 判级——RE-PUBLISH / REPUBLISH-WITH-REVIEW 才走本清单（退出码 0）；
+2. `src/compatibility.ts`：相应代际 `pairs` 追加 pair + 代际注释补一段审计结论指针（§5.N）；
+3. `scripts/install-rc17-fixture.mjs`：追加 `*-rcNXX` 真实包别名三件（connection / frontend-static / webserver）+ 共享 hoisted scope 注释；
+4. `tests/gate.test.mjs` 四处：精确对正例（fixtures + `evaluateWith`×2 + `evaluateGate`）、`resolveCompatibilityProfile` 正例与跨 patch 混合 `undefined` 断言、rejects-mixed 区双向混合 fixture、**`GATE_VERSIONS` 字面量清单**（gate constants 用例）；
+5. `tests/audit-candidate.test.mjs`：**`parsePairs` 期望表 + `pickBasePair` 期望值两处字面量**——4 与 5 的字面量是历轮仅有的两处漏改点（rc.3 轮实录：测试会红兜住，但烧一整轮 `test:all`）；
+6. `tests/manifest.test.mjs`：rcNXX fixture-only 别名守护用例；
+7. `tests/composition/active-rcNXX.test.mjs` 新建：镜像上一 pair 的套件（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）；
+8. `tests/composition/npm-flat-rc17.test.mjs`：imports 三件 + manifest 回退激活用例；
+9. 文档五件：`README.md`（版本列表×2、代际分组句、兼容表 pair 行、mixed text 例）、`GLOSSARY.md`（profile 行、whitelist 行）、`docs/DESIGN.md`（代际表、不得激活清单、行状态表）、本文（§5.N 审计记录 + §6 已通过行）、`CHANGELOG.md` 新条目——其中 README/GLOSSARY/DESIGN 由 docs-sync 测试强制，漏改直接红；
+10. `package.json` description 版本列表 → `npm version <x.y.z> --no-git-tag-version --ignore-scripts`（同步 lock 根字段两处，know-how 031 同款纪律）；
+11. `npm run test:all` 全绿（失败数必须为 0；恒定 1 skip 为环境条件项）→ commit + tag + push，发布轮询按 know-how 018。
+
 ### 5.1 加入已有 profile
 
 只有以下条件全部满足，才可把新版本对追加到既有 `pairs`：
