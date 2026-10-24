@@ -4,6 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.2] - 2026-10-24
+
+- 新增 DSH `0.2.1-rc.3` 支持：`npm run audit-candidate` 审计为契约面等价重发布（REPUBLISH-WITH-REVIEW）——connection/webserver/scope/frontend-static/app-boot/runtime 全部仅 manifest bump，web-app patch 仅新增非 connection 行（`entry-customization`），**connection 行逐字段一致**、`presets/` 逐字节一致；按 §5.1 作为第三个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.11），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）
+- 测试：真实 0.2.1-rc.3 npm fixture 组合套件（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）+ npm flat 回退用例 + gate/manifest 断言
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`
+
 ## [0.4.1] - 2026-10-17
 
 - 新增 DSH `0.2.1-rc.2` 支持：`npm run audit-candidate` 审计为契约面等价重发布（REPUBLISH-WITH-REVIEW）——connection/webserver/scope/frontend-static/app-boot/runtime 全部仅 manifest bump（本轮回零代码 diff），web-app patch 仅新增非 connection 行（`ui-deepseek-model-label-1017`），**connection 行逐字段一致**；按 §5.1 作为第二个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.10），未新增 adapter/client variant

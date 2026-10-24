@@ -6,9 +6,9 @@
 
 个人自用的 DSH Web 插件：在已验证的 DSH compatibility profile 上自动跳过 BrowserAuth，打开 Web 地址即可直接使用，**不必每次把启动 URL 里那串随机 token 抄进浏览器**。
 
-- **精确 profile 门控**：当前支持 `0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1` 与 `0.2.1-rc.2`，按 host/client 兼容代际分组；不是把所有版本塞进同一个实现。
+- **精确 profile 门控**：当前支持 `0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2` 与 `0.2.1-rc.3`，按 host/client 兼容代际分组；不是把所有版本塞进同一个实现。
 - **严格成对匹配**：runtime `@deepseek-ai/dsh` 与 `@deepseek-ai/dsh-client-connection` 必须组成已知版本对。混合版本、未知版本、profile 未实现或解析失败都会自动休眠。
-- **分代适配**：`0.1.2-rc.1` 使用 `legacy-web-v1`；`0.1.5-rc.1` 与 `0.1.5-rc.2` 使用 `carrier-neutral-v2`，包含 request body mode、RPC carrier 和对应浏览器 client variant 适配；`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1` 与 `0.2.0-rc.2` 使用 `carrier-neutral-v3`，覆盖 0.1.7 引入、0.2.0 沿用的 `admit()`/OperatorPeer 准入、`connection/request` waterfall 与 mount-preserving BrowserAuth；`0.2.1-rc.1` 与 `0.2.1-rc.2` 使用 `carrier-neutral-v4`，覆盖 0.2.1 的 Peer/principal 准入重构、`admission.peer` 透传 bridge、新 `/connect` 交换通道与 `webStartup` 信任来源（0.2.1 是真实契约变化，独立代际；rc.2 为契约面等价重发布，见 docs/COMPATIBILITY.md §5.8/§5.9/§5.10）。
+- **分代适配**：`0.1.2-rc.1` 使用 `legacy-web-v1`；`0.1.5-rc.1` 与 `0.1.5-rc.2` 使用 `carrier-neutral-v2`，包含 request body mode、RPC carrier 和对应浏览器 client variant 适配；`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1` 与 `0.2.0-rc.2` 使用 `carrier-neutral-v3`，覆盖 0.1.7 引入、0.2.0 沿用的 `admit()`/OperatorPeer 准入、`connection/request` waterfall 与 mount-preserving BrowserAuth；`0.2.1-rc.1`、`0.2.1-rc.2` 与 `0.2.1-rc.3` 使用 `carrier-neutral-v4`，覆盖 0.2.1 的 Peer/principal 准入重构、`admission.peer` 透传 bridge、新 `/connect` 交换通道与 `webStartup` 信任来源（0.2.1 是真实契约变化，独立代际；rc.2/rc.3 为契约面等价重发布，见 docs/COMPATIBILITY.md §5.8/§5.9/§5.10/§5.11）。
 - **不修改 DSH 本体与任何机制**：仅通过 DSH 官方插件 patch 机制替换 Connection 行；卸载或禁用插件并重启，即完全恢复官方行为。
 - **安全提醒**：跳过认证后，Web 对本机/可信网络内的访问不再有身份层，请勿把 DSH 端口暴露给不可信网络。
 
@@ -37,7 +37,7 @@ sudo systemctl restart deepseek-harness.service   # 按你的部署方式重启 
 - DSH 0.1.2-rc.1：legacy-web-v1
 - DSH 0.1.5-rc.1 / 0.1.5-rc.2：carrier-neutral-v2
 - DSH 0.1.7-rc.1 / 0.1.7-rc.2 / 0.2.0-rc.1 / 0.2.0-rc.2：carrier-neutral-v3
-- DSH 0.2.1-rc.1 / 0.2.1-rc.2：carrier-neutral-v4
+- DSH 0.2.1-rc.1 / 0.2.1-rc.2 / 0.2.1-rc.3：carrier-neutral-v4
 其它版本或 runtime/connection 混合版本会自动休眠，不要强行处理。
 desktop 宿主一律自动休眠（多进程树判别：安装槽位/启动器 argv/宿主二进制，0.3.9 起生效），这是设计行为，不要强行处理或改代码绕过；desktop 用户请直接使用 0.3.11+（0.3.6-0.3.10 在 desktop 有已知缺陷，见 docs/COMPATIBILITY.md §7.4）。
 
@@ -46,7 +46,7 @@ desktop 宿主一律自动休眠（多进程树判别：安装槽位/启动器 a
 2. 重启 DSH Web 并轮询 http://127.0.0.1:3080 直到恢复 200
    （systemd 系统级部署：sudo systemctl restart deepseek-harness.service；
    user 级部署：systemctl --user restart dsh-web.service；端口以实际部署为准）。
-3. 若版本是 0.1.2-rc.1、0.1.5-rc.1、0.1.5-rc.2、0.1.7-rc.1、0.1.7-rc.2、0.2.0-rc.1、0.2.0-rc.2、0.2.1-rc.1 或 0.2.1-rc.2：
+3. 若版本是 0.1.2-rc.1、0.1.5-rc.1、0.1.5-rc.2、0.1.7-rc.1、0.1.7-rc.2、0.2.0-rc.1、0.2.0-rc.2、0.2.1-rc.1、0.2.1-rc.2 或 0.2.1-rc.3：
    确认 journal/日志中出现固定警告
    "BrowserAuth has been skipped"，并验证浏览器直接打开 Web 地址不再要求 token。
 4. 若版本不是精确白名单版本，或 profile/依赖契约不匹配：插件应自动休眠，
@@ -75,6 +75,7 @@ sudo systemctl restart deepseek-harness.service
 | `0.2.0-rc.2` + `0.2.0-rc.2` | `carrier-neutral-v3` | 同上（0.2.0-rc.2 为依赖对齐重发布 + 无关 Desktop CLI 演进：插件契约面代码逐字节一致） | ✅ active（npm diff 审计 + 真实 0.2.0-rc.2 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.7；实机 checklist 见当日升级记录） |
 | `0.2.1-rc.1` + `0.2.1-rc.1` | `carrier-neutral-v4` | carrier-neutral-021：Peer/principal 准入 + `admission.peer` 透传 bridge + `/connect` 交换通道 + webStartup 信任来源 + 0.2.1 browser client | ✅ active（§5.8 契约审计定谳新代际 + 真实 0.2.1-rc.1 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.9；实机 checklist 待宿主升级后回填） |
 | `0.2.1-rc.2` + `0.2.1-rc.2` | `carrier-neutral-v4` | 同上（0.2.1-rc.2 为契约面等价重发布：web-app patch 仅新增非 connection 行，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 0.2.1-rc.2 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.10；实机 checklist 待宿主升级后回填） |
+| `0.2.1-rc.3` + `0.2.1-rc.3` | `carrier-neutral-v4` | 同上（0.2.1-rc.3 为契约面等价重发布：web-app patch 仅新增非 connection 行，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 0.2.1-rc.3 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.11；实机 checklist 待宿主升级后回填） |
 | desktop profile（存在 dsh-desktop-host 的环境，任意版本对） | — | 😴 dormant-by-design：desktop 一律休眠 | dormant |
 | 其它版本或混合版本对 | — | 😴 自动休眠：官方行为分毫不变 | dormant |
 
@@ -101,6 +102,9 @@ runtime=0.2.1-rc.1 + connection=0.2.1-rc.1 → carrier-neutral-v4
 runtime=0.2.1-rc.1 + connection=0.2.1-rc.2 → dormant（同代际跨 patch 混合同样是事故形态）
 runtime=0.2.1-rc.2 + connection=0.2.1-rc.1 → dormant
 runtime=0.2.1-rc.2 + connection=0.2.1-rc.2 → carrier-neutral-v4
+runtime=0.2.1-rc.2 + connection=0.2.1-rc.3 → dormant（同代际跨 patch 混合同样是事故形态）
+runtime=0.2.1-rc.3 + connection=0.2.1-rc.2 → dormant
+runtime=0.2.1-rc.3 + connection=0.2.1-rc.3 → carrier-neutral-v4
 runtime=0.1.7-rc.2 + connection=0.1.5-rc.2 → dormant（跨代际混合）
 ```
 
