@@ -420,7 +420,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - `tests/composition/npm-flat-rc17.test.mjs` 追加 0.2.1-rc.3 manifest 回退激活用例。
 - `tests/manifest.test.mjs`：rc213 保持 fixture-only 别名。
 
-第 6 条（真实 DSH 0.2.1 宿主 active checklist）与 §5.9/§5.10 的清单合并——宿主升级时以实际安装的 0.2.1 版本为准执行并回填。
+第 6 条（真实 DSH 0.2.1 宿主 active checklist）已在 2026-10-25 的 DSH Web `0.2.1-rc.3` 宿主通过：启动日志出现 BrowserAuth 跳过横幅，未携带 token 的 `GET /` 返回 200；本次启动日志无 profile 守卫拒载或未激活记录。Desktop 仍按设计休眠。
 
 ## 6. 当前验证状态
 

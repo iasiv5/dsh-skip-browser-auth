@@ -50,6 +50,9 @@
     "prepare": "npm run build"
   },
   "dsh": {
+    "engines": {
+      "dsh": ">=0.1.2-rc.1"
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     },

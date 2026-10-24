@@ -1,7 +1,7 @@
 # @iasiv5/dsh-skip-browser-auth
 
 [![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skip-browser-auth?label=npm&color=cb3837)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
-[![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.2--rc.1_%7C_0.1.5--rc.1_%7C_0.1.5--rc.2_%7C_0.1.7--rc.1_%7C_0.1.7--rc.2_%7C_0.2.0--rc.1_%7C_0.2.0--rc.2_%7C_0.2.1--rc.1_%7C_0.2.1--rc.2_verified-blue)](#兼容版本)
+[![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.2--rc.1_%7C_0.1.5--rc.1_%7C_0.1.5--rc.2_%7C_0.1.7--rc.1_%7C_0.1.7--rc.2_%7C_0.2.0--rc.1_%7C_0.2.0--rc.2_%7C_0.2.1--rc.1_%7C_0.2.1--rc.2_%7C_0.2.1--rc.3_verified-blue)](#兼容版本)
 [![License](https://img.shields.io/github/license/iasiv5/dsh-skip-browser-auth?color=green)](./LICENSE)
 
 个人自用的 DSH Web 插件：在已验证的 DSH compatibility profile 上自动跳过 BrowserAuth，打开 Web 地址即可直接使用，**不必每次把启动 URL 里那串随机 token 抄进浏览器**。
@@ -64,6 +64,8 @@ sudo systemctl restart deepseek-harness.service
 
 ## 兼容版本与 profile
 
+宿主最低版本声明为 DSH `>=0.1.2-rc.1`；插件只在下表的精确 runtime/connection 版本对上激活，其他版本或混合版本对自动休眠。
+
 | DSH runtime / connection 版本对 | Profile | Host/client 适配 | 状态 |
 | --- | --- | --- | --- |
 | `0.1.2-rc.1` + `0.1.2-rc.1` | `legacy-web-v1` | legacy `/api` prefix + 0.1.2 client | ✅ active |
@@ -75,7 +77,7 @@ sudo systemctl restart deepseek-harness.service
 | `0.2.0-rc.2` + `0.2.0-rc.2` | `carrier-neutral-v3` | 同上（0.2.0-rc.2 为依赖对齐重发布 + 无关 Desktop CLI 演进：插件契约面代码逐字节一致） | ✅ active（npm diff 审计 + 真实 0.2.0-rc.2 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.7；实机 checklist 见当日升级记录） |
 | `0.2.1-rc.1` + `0.2.1-rc.1` | `carrier-neutral-v4` | carrier-neutral-021：Peer/principal 准入 + `admission.peer` 透传 bridge + `/connect` 交换通道 + webStartup 信任来源 + 0.2.1 browser client | ✅ active（§5.8 契约审计定谳新代际 + 真实 0.2.1-rc.1 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.9；实机 checklist 待宿主升级后回填） |
 | `0.2.1-rc.2` + `0.2.1-rc.2` | `carrier-neutral-v4` | 同上（0.2.1-rc.2 为契约面等价重发布：web-app patch 仅新增非 connection 行，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 0.2.1-rc.2 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.10；实机 checklist 待宿主升级后回填） |
-| `0.2.1-rc.3` + `0.2.1-rc.3` | `carrier-neutral-v4` | 同上（0.2.1-rc.3 为契约面等价重发布：web-app patch 仅新增非 connection 行，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 0.2.1-rc.3 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.11；实机 checklist 待宿主升级后回填） |
+| `0.2.1-rc.3` + `0.2.1-rc.3` | `carrier-neutral-v4` | 同上（0.2.1-rc.3 为契约面等价重发布：web-app patch 仅新增非 connection 行，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 rc.3 fixture 测试，见 docs/COMPATIBILITY.md §5.11；2026-10-25 Web 实测：BrowserAuth 横幅出现、无 token GET / 返回 200） |
 | desktop profile（存在 dsh-desktop-host 的环境，任意版本对） | — | 😴 dormant-by-design：desktop 一律休眠 | dormant |
 | 其它版本或混合版本对 | — | 😴 自动休眠：官方行为分毫不变 | dormant |
 

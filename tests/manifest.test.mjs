@@ -11,6 +11,10 @@ import { CONNECTION_PACKAGE, GATE_VERSIONS, GATE_RUNTIME_PACKAGE } from '../lib/
 
 const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
+test('DSH host requirement matches the oldest supported runtime line', () => {
+  assert.equal(manifest.dsh?.engines?.dsh, '>=0.1.2-rc.1')
+})
+
 test('dependencies must not carry any @deepseek-ai runtime package', () => {
   const dependencies = manifest.dependencies ?? {}
   const offenders = Object.keys(dependencies).filter(name => name.startsWith('@deepseek-ai/'))
