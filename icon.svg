@@ -1,0 +1,17 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="dsh-skip-browser-auth">
+  <!-- dsh-skip-browser-auth 跳过浏览器认证：前置小点（被跳过的 Token 输入）
+       + 双快进箭头（蓝→青）= 免输 Token 直接通过 -->
+  <circle cx="5.8" cy="18" r="2" fill="url(#b)"/>
+  <path d="M10.5 10.5L19.5 18L10.5 25.5Z" fill="url(#b)" stroke="url(#b)" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M20.5 10.5L29.5 18L20.5 25.5Z" fill="url(#t)" stroke="url(#t)" stroke-width="2.6" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="b" x1="9" y1="12" x2="19" y2="24" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#69B9FF"/>
+      <stop offset="1" stop-color="#324DE2"/>
+    </linearGradient>
+    <linearGradient id="t" x1="20" y1="12" x2="30" y2="24" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#45E7A4"/>
+      <stop offset="1" stop-color="#05909D"/>
+    </linearGradient>
+  </defs>
+</svg>
