@@ -4,6 +4,11 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.4] - 2026-10-25
+
+- 测试与文档打磨（**无产品变更，白名单与运行行为不变**）：G2 实施评审三条计划外建议落地——① COMPATIBILITY §6 已通过清单纳入 docs-sync 版本存在性守卫（收编新版本时第六处文档位漏改必红；§6 代际句同步精确到完整版本串）；② active-generations 循环补 evil-host 走 dedicated RPC 路径的 403 断言（旧 active-rc15 独有形态回收，栅栏先于通道分发）；③ 实施计划 ≈289 预期行补勘误注；新增 `docs/BACKLOG.md` 承载评审建议的落盘与核销
+- 兼容 DSH：（不变）`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`
+
 ## [0.4.3] - 2026-10-25
 
 - 测试层表驱动化（**无产品变更，白名单与运行行为不变**）：新增 fixture 登记表 `tests/fixtures/registry.mjs`（版本↔别名三件唯一事实源 + 双向完备守卫 `tests/structure.test.mjs`），9 份 `active-rc*.test.mjs` 与 3 份 `npm-flat*.test.mjs` 逐版本拷贝合并为 `active-generations` / `npm-flat-generations` 循环套件；gate / audit-candidate / manifest / docs-sync 的手写版本字面量全部改为从 `COMPATIBILITY_PROFILES`/登记表派生，gate 混合负例升级为全 N×N（90 对，标题含两版本串）
