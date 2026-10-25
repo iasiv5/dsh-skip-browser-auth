@@ -8,6 +8,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { CONNECTION_PACKAGE, GATE_VERSIONS, GATE_RUNTIME_PACKAGE } from '../lib/gate.js'
+import { VERSION_FIXTURES, PROFILE_BUILD_ALIASES } from './fixtures/registry.mjs'
 
 const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
@@ -27,91 +28,36 @@ test(`connection stays a devDependency pinned to one profile version`, () => {
   assert.equal(manifest.dependencies?.[CONNECTION_PACKAGE], undefined)
 })
 
-test('0.1.5 client build alias stays dev-only', () => {
-  const devDependencies = manifest.devDependencies ?? {}
-  assert.equal(devDependencies['dsh-client-connection-rc15'], 'npm:@deepseek-ai/dsh-client-connection@0.1.5-rc.1')
-  assert.equal(manifest.dependencies?.['dsh-client-connection-rc15'], undefined)
-})
-
-test('0.1.7 client build alias stays dev-only', () => {
-  const devDependencies = manifest.devDependencies ?? {}
-  assert.equal(devDependencies['dsh-client-connection-rc17'], 'npm:@deepseek-ai/dsh-client-connection@0.1.7-rc.2')
-  assert.equal(manifest.dependencies?.['dsh-client-connection-rc17'], undefined)
-})
-
-test('rc171 stays a fixture-only alias (never a runtime dep or build anchor)', () => {
-  // rc171 只是组合测试 fixture 别名（真实 0.1.7-rc.1 包，--no-save 安装）；
-  // client variant 仍由 rc17 别名单一来源构建——rc.1 与 rc.2 的 client/ 逐字节
-  // 一致（docs/COMPATIBILITY.md §5.5），清单不得出现第二个 0.1.7 构建锚点。
+// 逐版本 fixture 别名守卫（registry 循环版，2026-10-25 表驱动化；取代旧
+// rc171/rc20/rc202/rc211/rc212/rc213 六块——rc171 旧块只守单别名，现按 Q8
+// 归一为三件全守）：fixture 三件只允许以 --no-save 安装进 node_modules，
+// 绝不进入 dependencies（防 profile 抬升遮蔽 runtime fallback）或
+// devDependencies（防出现第二个构建锚点）。
+test('per-version fixture aliases stay fixture-only (never runtime deps or build anchors)', () => {
   const dependencies = manifest.dependencies ?? {}
   const devDependencies = manifest.devDependencies ?? {}
-  assert.equal(dependencies['dsh-client-connection-rc171'], undefined)
-  assert.equal(devDependencies['dsh-client-connection-rc171'], undefined)
-})
-
-test('rc20 stays a fixture-only alias (never a runtime dep or build anchor)', () => {
-  // rc20 只是组合测试 fixture 别名（真实 0.2.0-rc.1 包，--no-save 安装）；
-  // 0.2.0-rc.1 与 0.1.7-rc.2 在插件契约面逐字节一致（docs/COMPATIBILITY.md
-  // §5.6），client variant 仍由 rc17 别名单一来源构建，清单不得出现第二个
-  // 0.1.x/0.2.x 线构建锚点。
-  const dependencies = manifest.dependencies ?? {}
-  const devDependencies = manifest.devDependencies ?? {}
-  for (const alias of ['dsh-client-connection-rc20', 'frontend-static-rc20', 'webserver-rc20']) {
-    assert.equal(dependencies[alias], undefined)
-    assert.equal(devDependencies[alias], undefined)
+  // rc15/rc17 别名双重身份：既是 fixture 别名又是所在代际的构建锚（同名同
+  // spec 合法驻留 devDeps，精确 spec 由下一测试守）；其余 fixture 别名一律
+  // 不得出现在任何依赖清单。
+  const buildAnchors = new Set(Object.values(PROFILE_BUILD_ALIASES).map((anchor) => anchor.alias))
+  for (const entry of VERSION_FIXTURES) {
+    if (entry.aliases === null) continue
+    for (const alias of Object.values(entry.aliases)) {
+      assert.equal(dependencies[alias], undefined, `${alias} must not be a runtime dependency`)
+      if (buildAnchors.has(alias)) continue
+      assert.equal(devDependencies[alias], undefined, `${alias} must not be a build anchor devDependency`)
+    }
   }
 })
 
-test('rc202 stays a fixture-only alias (never a runtime dep or build anchor)', () => {
-  // rc202 只是组合测试 fixture 别名（真实 0.2.0-rc.2 包，--no-save 安装）；
-  // 0.2.0-rc.2 与 0.2.0-rc.1 在插件契约面逐字节一致（docs/COMPATIBILITY.md
-  // §5.7），client variant 仍由 rc17 别名单一来源构建，清单不得出现第二个
-  // 0.1.x/0.2.x 线构建锚点。
+// 每代际唯一构建锚（registry PROFILE_BUILD_ALIASES 循环版；含旧 rc211 块中的
+// rc21 正向 pin）：精确 devDep spec，绝不进 dependencies。
+test('client build anchors stay dev-only with exact specs (one per generation)', () => {
   const dependencies = manifest.dependencies ?? {}
   const devDependencies = manifest.devDependencies ?? {}
-  for (const alias of ['dsh-client-connection-rc202', 'frontend-static-rc202', 'webserver-rc202']) {
-    assert.equal(dependencies[alias], undefined)
-    assert.equal(devDependencies[alias], undefined)
-  }
-})
-
-test('rc211 stays a fixture-only alias (never a runtime dep; the build anchor is the rc21 devDep)', () => {
-  // rc211 是 0.2.1-rc.1 的组合测试 fixture 别名（--no-save 安装）。v4 的 client
-  // variant 构建锚点是 devDependencies 里的 dsh-client-connection-rc21（精确
-  // devDep），rc211 别名不得进入任何 dependencies/devDependencies，避免出现
-  // 第二个 0.2.x 线构建输入（docs/COMPATIBILITY.md §5.9）。
-  const dependencies = manifest.dependencies ?? {}
-  const devDependencies = manifest.devDependencies ?? {}
-  for (const alias of ['dsh-client-connection-rc211', 'frontend-static-rc211', 'webserver-rc211']) {
-    assert.equal(dependencies[alias], undefined)
-    assert.equal(devDependencies[alias], undefined)
-  }
-  assert.equal(devDependencies['dsh-client-connection-rc21'], 'npm:@deepseek-ai/dsh-client-connection@0.2.1-rc.1')
-})
-
-test('rc212 stays a fixture-only alias (never a runtime dep or build anchor)', () => {
-  // rc212 只是组合测试 fixture 别名（真实 0.2.1-rc.2 包，--no-save 安装）；
-  // 0.2.1-rc.2 与 0.2.1-rc.1 在插件契约面仅 manifest 差异（docs/COMPATIBILITY.md
-  // §5.10），client variant 仍由 rc21 devDep 单一来源构建，清单不得出现第二个
-  // 0.2.1 线构建锚点。
-  const dependencies = manifest.dependencies ?? {}
-  const devDependencies = manifest.devDependencies ?? {}
-  for (const alias of ['dsh-client-connection-rc212', 'frontend-static-rc212', 'webserver-rc212']) {
-    assert.equal(dependencies[alias], undefined)
-    assert.equal(devDependencies[alias], undefined)
-  }
-})
-
-test('rc213 stays a fixture-only alias (never a runtime dep or build anchor)', () => {
-  // rc213 只是组合测试 fixture 别名（真实 0.2.1-rc.3 包，--no-save 安装）；
-  // 0.2.1-rc.3 与 0.2.1-rc.1 在插件契约面仅 manifest 差异（docs/COMPATIBILITY.md
-  // §5.11），client variant 仍由 rc21 devDep 单一来源构建，清单不得出现第二个
-  // 0.2.1 线构建锚点。
-  const dependencies = manifest.dependencies ?? {}
-  const devDependencies = manifest.devDependencies ?? {}
-  for (const alias of ['dsh-client-connection-rc213', 'frontend-static-rc213', 'webserver-rc213']) {
-    assert.equal(dependencies[alias], undefined)
-    assert.equal(devDependencies[alias], undefined)
+  for (const [profileId, anchor] of Object.entries(PROFILE_BUILD_ALIASES)) {
+    assert.equal(devDependencies[anchor.alias], anchor.spec, `${profileId} build anchor ${anchor.alias} must pin ${anchor.spec}`)
+    assert.equal(dependencies[anchor.alias], undefined)
   }
 })
 

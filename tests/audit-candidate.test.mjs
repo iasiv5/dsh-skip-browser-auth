@@ -18,6 +18,7 @@ import {
   pickBasePair,
 } from '../scripts/audit-candidate.mjs'
 import { readFileSync } from 'node:fs'
+import { COMPATIBILITY_PROFILES } from '../lib/gate.js'
 
 test('anchor set matches the §5.5–§5.7 audited collection, order = probe surface first, runtime last', () => {
   assert.equal(ANCHOR_PACKAGES.length, 8)
@@ -25,21 +26,33 @@ test('anchor set matches the §5.5–§5.7 audited collection, order = probe sur
   assert.equal(ANCHOR_PACKAGES.at(-1), '@deepseek-ai/dsh')
 })
 
+// 独立数值比较器（与脚本的 compareVersions 实现互证，非复用）：
+// 拆 semver core 与 rc 前缀，core 数值比较；正式版 > 预发布；rc 数值比较。
+function compareIndependent(a, b) {
+  const parse = (v) => {
+    const dash = v.indexOf('-')
+    const core = (dash === -1 ? v : v.slice(0, dash)).split('.').map(Number)
+    const rc = dash === -1 ? Infinity : Number(v.slice(dash + 1).replace(/^rc\./, ''))
+    return { core, rc }
+  }
+  const left = parse(a)
+  const right = parse(b)
+  for (let i = 0; i < 3; i++) {
+    if (left.core[i] !== right.core[i]) return left.core[i] - right.core[i]
+  }
+  return left.rc - right.rc
+}
+
 test('parsePairs reads the exact-pair table from the compatibility source', () => {
   const pairs = parsePairs(readFileSync(new URL('../src/compatibility.ts', import.meta.url), 'utf8'))
-  assert.deepEqual(pairs, [
-    { runtime: '0.1.2-rc.1', connection: '0.1.2-rc.1' },
-    { runtime: '0.1.5-rc.1', connection: '0.1.5-rc.1' },
-    { runtime: '0.1.5-rc.2', connection: '0.1.5-rc.2' },
-    { runtime: '0.1.7-rc.1', connection: '0.1.7-rc.1' },
-    { runtime: '0.1.7-rc.2', connection: '0.1.7-rc.2' },
-    { runtime: '0.2.0-rc.1', connection: '0.2.0-rc.1' },
-    { runtime: '0.2.0-rc.2', connection: '0.2.0-rc.2' },
-    { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
-    { runtime: '0.2.1-rc.2', connection: '0.2.1-rc.2' },
-    { runtime: '0.2.1-rc.3', connection: '0.2.1-rc.3' },
-  ])
-  assert.equal(pickBasePair(pairs).runtime, '0.2.1-rc.3')
+  // 期望表从编译产物 COMPATIBILITY_PROFILES 展开——源文本 regex 与运行时表
+  // 双表示互证，任何一侧漂移都会红（2026-10-25 表驱动化，实施计划 Task 8）。
+  const expected = COMPATIBILITY_PROFILES.flatMap((profile) =>
+    profile.pairs.map((pair) => ({ runtime: pair.runtime, connection: pair.connection })))
+  assert.deepEqual(pairs, expected)
+  // pickBasePair 期望值用测试内独立比较器求最大（非同义反复）。
+  const latest = expected.reduce((max, pair) => (compareIndependent(pair.runtime, max.runtime) > 0 ? pair : max))
+  assert.equal(pickBasePair(pairs).runtime, latest.runtime)
 })
 
 test('isVersionMissingError recognizes npm version-not-found failures, not transient ones', () => {
