@@ -4,6 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.3] - 2026-10-25
+
+- 测试层表驱动化（**无产品变更，白名单与运行行为不变**）：新增 fixture 登记表 `tests/fixtures/registry.mjs`（版本↔别名三件唯一事实源 + 双向完备守卫 `tests/structure.test.mjs`），9 份 `active-rc*.test.mjs` 与 3 份 `npm-flat*.test.mjs` 逐版本拷贝合并为 `active-generations` / `npm-flat-generations` 循环套件；gate / audit-candidate / manifest / docs-sync 的手写版本字面量全部改为从 `COMPATIBILITY_PROFILES`/登记表派生，gate 混合负例升级为全 N×N（90 对，标题含两版本串）
+- 三个 fixture 安装脚本合一为 `npm run test:fixtures`（登记表驱动、单次全量安装）；republish 收编触点从 15 文件压缩为 `src/compatibility.ts` + registry **两处代码改动**（docs/COMPATIBILITY.md §5.0 已改写）；`package.json` description 紧凑记法与 README 代际分组由 docs-sync 强制同步
+- 兼容 DSH：（不变）`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`
+
 ## [0.4.2] - 2026-10-24
 
 - 新增 DSH `0.2.1-rc.3` 支持：`npm run audit-candidate` 审计为契约面等价重发布（REPUBLISH-WITH-REVIEW）——connection/webserver/scope/frontend-static/app-boot/runtime 全部仅 manifest bump，web-app patch 仅新增非 connection 行（`entry-customization`），**connection 行逐字段一致**、`presets/` 逐字节一致；按 §5.1 作为第三个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.11），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）

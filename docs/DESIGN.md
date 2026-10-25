@@ -141,10 +141,10 @@ sudo systemctl restart deepseek-harness.service
 
 ```sh
 npm run test:all
-# 等价于：安装 rc2 fixture + 安装 rc2/rc15/rc17 三代际 fixture + build + typecheck + npm test
+# 等价于：test:fixtures（登记表驱动单次全量安装）+ typecheck + npm test
 ```
 
-`test:rc2-fixture` 和 `test:rc15-fixture` 需要 npm 网络访问，使用 alias、`--no-save`、`--package-lock=false` 和 `--ignore-scripts`；脚本以安装前后快照证明不修改 `package.json` 与 `package-lock.json`。rc15 fixture 脚本会同时保留 rc2 与 rc15 aliases，避免 npm peer resolver 在顺序安装时删除上一代。
+`test:fixtures`（`scripts/install-fixtures.mjs`）需要 npm 网络访问：spec 清单由 `tests/fixtures/registry.mjs` 的 `installSpecs()` 派生——全部白名单版本的别名三件 + 版本无关常量（rc2 回归组、apiproxy、scope/invariants peer pins、rc2 时代传递依赖），使用 alias、`--no-save`、`--package-lock=false` 和 `--ignore-scripts`，并以安装前后快照证明不修改 `package.json` 与 `package-lock.json`。**单次全量安装**天然避免 npm peer resolver 在顺序安装时删除上一代别名（旧三脚本串行时代的整化清除问题类随之消失）。
 
 组合测试使用真实 Loader + Include + 官方产物，覆盖：
 
@@ -246,6 +246,6 @@ npm run test:all
 | 6 | v3 专项 | 启动 URL / 栅栏负例 | journal 打印 `dsh web: http://127.0.0.1:3080/`（无 `?token=`，`authenticatedUrl` stub 生效，对比升级前 14:17 boot 带 token）✅；evil Host `POST /api/$events/result` → `403` ✅ |
 | 7 | 回滚演练 | `dsh plugin --profile web remove` + 重启 | `GET /` → `401 Unauthorized`（官方 BrowserAuth 完整恢复）✅；重装 + 重启后 4s 恢复 `200`、warning ×1、`location: ./`、`$events/result` 200 ✅ |
 
-备注：dedicated RPC channel 非 405 未在实机复测——0.1.7 生产生态（api-gateway）只使用共享 `/api` 拦截器与 `/api/remote.mux` WebSocket route，无 dedicated channel 消费方；该路径由真实 npm fixture 组合测试覆盖（`tests/composition/active-rc17.test.mjs`）。
+备注：dedicated RPC channel 非 405 未在实机复测——0.1.7 生产生态（api-gateway）只使用共享 `/api` 拦截器与 `/api/remote.mux` WebSocket route，无 dedicated channel 消费方；该路径由真实 npm fixture 组合测试覆盖（`tests/composition/active-generations.test.mjs` 全版本循环）。
 
 另记录（与本插件无关，见 COMPATIBILITY.md §6 末段）：同 boot 的 `dsh-auth` `/auth/login` TypeError（`ctx.settings.get` rc.1 shim vs 0.1.7 settings API）、`modsearch` settings 报错、`copilot-authorization` 服务重名——三者均不消费 connection 服务。

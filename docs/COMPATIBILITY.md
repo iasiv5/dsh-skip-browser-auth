@@ -70,6 +70,7 @@ const COMPATIBILITY_PROFILES = [
 - patch 把 profile id 传给插件行；host backstop 再以 manifest 验证一遍。
 - host 通过 `__DSH_SKIP_BROWSER_AUTH_PROFILE__` 把同一个 profile id 传给 client dispatcher。
 - `hostProfiles`：允许激活的宿主 profile 集合，当前恒为 `['web']`（web-only）；探针表达式与 apply backstop 双层校验，语义见 §7。
+- 测试层版本清单一律派生（2026-10-25 起）：gate / audit-candidate / manifest / docs-sync 的版本断言从本表与 fixture 登记表（`tests/fixtures/registry.mjs`）循环生成，**禁止逐版本落测试文件**——`tests/structure.test.mjs` 守卫 `active-rcNXX`/`npm-flat-rcNXX` 命名回潮并锁定登记表与本表的双向镜像。
 
 ### 2.1 安全不变量
 
@@ -155,23 +156,20 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 > 片段；第 4–6 条（gate/混合负例、真实 fixture 组合测试、实机 active checklist）
 > 仍必须人工完成。判级依据与本节各审计记录的人工判据一致。
 
-### 5.0 republish 收编触点清单（§5.1 路径的文件级 runbook；2026-10-24 `0.2.1-rc.3` 轮实证）
+### 5.0 republish 收编触点清单（registry 时代；2026-10-25 表驱动化，取代 15 文件版 runbook）
 
-> 适用范围：§5.1 收编（republish 族，追加 pair 即可）。CONTRACT-CHANGED 走 §5.2 新代际，需另建 adapter/client variant 与 bundle patch 行，触点是本清单的超集，不适用。`lib/` 与仓库根 `cordis.patch.yml` 是 `npm run build` 的产物，永远不手改。别名约定：rc.NXX = 新版本去点紧凑别名（0.2.1-rc.3 → rc213，先例 rc152/rc171/rc20/rc202/rc211/rc212）。
+> 适用范围不变：§5.1 收编（republish 族，追加 pair 即可）。CONTRACT-CHANGED 走 §5.2 新代际，需另建 adapter/client variant 与 bundle patch 行，触点是本清单的超集，不适用。别名约定：rc.NXX = 新版本去点紧凑别名（0.2.1-rc.3 → rc213，先例 rc152/rc171/rc20/rc202/rc211/rc212/rc213）。`lib/` 与仓库根 `cordis.patch.yml` 是 `npm run build` 的产物，永远不手改。
 
-按序核对：
+按序核对（旧清单的 gate/audit-candidate 字面量两处坑与逐版本测试文件三步已随派生化消灭）：
 
 1. `npm run audit-candidate -- <candidate>` 判级——RE-PUBLISH / REPUBLISH-WITH-REVIEW 才走本清单（退出码 0）；
 2. `src/compatibility.ts`：相应代际 `pairs` 追加 pair + 代际注释补一段审计结论指针（§5.N）；
-3. `scripts/install-rc17-fixture.mjs`：追加 `*-rcNXX` 真实包别名三件（connection / frontend-static / webserver）+ 共享 hoisted scope 注释；
-4. `tests/gate.test.mjs` 四处：精确对正例（fixtures + `evaluateWith`×2 + `evaluateGate`）、`resolveCompatibilityProfile` 正例与跨 patch 混合 `undefined` 断言、rejects-mixed 区双向混合 fixture、**`GATE_VERSIONS` 字面量清单**（gate constants 用例）；
-5. `tests/audit-candidate.test.mjs`：**`parsePairs` 期望表 + `pickBasePair` 期望值两处字面量**——4 与 5 的字面量是历轮仅有的两处漏改点（rc.3 轮实录：测试会红兜住，但烧一整轮 `test:all`）；
-6. `tests/manifest.test.mjs`：rcNXX fixture-only 别名守护用例；
-7. `tests/composition/active-rcNXX.test.mjs` 新建：镜像上一 pair 的套件（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）；
-8. `tests/composition/npm-flat-rc17.test.mjs`：imports 三件 + manifest 回退激活用例；
-9. 文档五件：`README.md`（版本列表×2、代际分组句、兼容表 pair 行、mixed text 例）、`GLOSSARY.md`（profile 行、whitelist 行）、`docs/DESIGN.md`（代际表、不得激活清单、行状态表）、本文（§5.N 审计记录 + §6 已通过行）、`CHANGELOG.md` 新条目——其中 README/GLOSSARY/DESIGN 由 docs-sync 测试强制，漏改直接红；
-10. `package.json` description 版本列表 → `npm version <x.y.z> --no-git-tag-version --ignore-scripts`（同步 lock 根字段两处，know-how 031 同款纪律）；
-11. `npm run test:all` 全绿（失败数必须为 0；恒定 1 skip 为环境条件项）→ commit + tag + push，发布轮询按 know-how 018。
+3. `tests/fixtures/registry.mjs`：`VERSION_FIXTURES` 追加一行条目（`version` / `profileId` / `aliasSuffix` / `aliases` 三件）——active-generations 的 active 全链路与相邻对 dormant、npm-flat-generations 循环、manifest 别名守卫、gate 派生断言与安装器 `installSpecs()` **全部自动纳入**；`npm run test:fixtures` 以别名安装真实包；
+4. 文档五件：`README.md`（版本列表×2、代际分组句、兼容表 pair 行、提示块行、mixed text 例）、`GLOSSARY.md`（profile 行、whitelist 行）、`docs/DESIGN.md`（代际表、不得激活清单、行状态表）、本文（§5.N 审计记录 + §6 已通过行）、`CHANGELOG.md` 新条目——README/GLOSSARY/DESIGN 由 docs-sync 强制（存在性 + 代际分组位置感知），漏改直接红；
+5. `package.json` description 版本列表 → `npm version <x.y.z> --no-git-tag-version --ignore-scripts`（同步 lock 根字段两处，know-how 031 同款纪律）；description 紧凑记法展开与白名单的**有序相等**由 docs-sync 强制；
+6. `npm run test:all` 全绿（失败数必须为 0；恒定 1 skip 为环境条件项）→ commit + tag + push，发布轮询按 know-how 018。
+
+代码侧触点合计两处（步骤 2 + 步骤 3）。旧版 15 文件/11 步清单见 git 历史（2026-10-24 及以前）；「字面量漏改烧一整轮 `test:all`」的坑位已不存在。
 
 ### 5.1 加入已有 profile
 
@@ -181,7 +179,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 2. 现有 host adapter 无需分支即可正确工作。
 3. 现有 client variant 的 bundle 与 browser boot/global contract 完全一致。
 4. pnpm/npm 两种布局、v1/v2 resolver、path/manifest drift 测试通过。
-5. 真实 npm package fixture 和对应组合测试通过。
+5. 真实 npm package fixture 与表驱动组合套件通过（`tests/composition/active-generations.test.mjs` 全版本循环 + `tests/composition/npm-flat-generations.test.mjs`；fixture 由 `npm run test:fixtures` 以别名安装，登记表见 `tests/fixtures/registry.mjs`）。
 6. 真实 DSH 版本完成 active checklist，记录状态码、warning 和卸载恢复。
 
 ### 5.2 新增 profile

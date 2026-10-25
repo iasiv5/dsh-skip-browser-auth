@@ -281,7 +281,7 @@ export const GENERATION_CHECKLISTS // {profileId: {trustedRowId, indexMarker:Reg
 
 ---
 
-## 附录 A：断言对账表（c2 删除前逐行核销）
+## 附录 A：断言对账表（c2 删除前逐行核销；核销结论见文末「结果」节——全部行已验证落位 ✅）
 
 | 旧文件（test 数） | 新落点 | 增强标注 |
 | --- | --- | --- |
@@ -301,3 +301,35 @@ export const GENERATION_CHECKLISTS // {profileId: {trustedRowId, indexMarker:Reg
 | manifest.test 8 块 | 登记表循环（fixture-only 三件缺席 + 构建锚精确 spec） | rc171 单别名→三件（Q8 归一） |
 | audit-candidate.test 期望表 | COMPATIBILITY_PROFILES 展开互证 + 独立比较器 | — |
 | 合计 35 组合 test | 恰 38 新组合 test（27 active-generations + 11 npm-flat-generations）+ 结构守卫 3 + docs-sync +2 | 覆盖严格 ≥ 旧 |
+
+---
+
+## 结果（G1 实施核销，2026-10-25）
+
+**闸门**：G0 评审通过（独立评审 Agent，4 轮往返，18 项问题全部闭环，零分歧，台账 `.dsh-research/fixture-registry-plan-review-scratch/ledger.md`）；G1 实施完成；**本节写毕即停，等 G2 人工评审**；G3 发版另行发起。
+
+**Commit 清单**（每 commit 前均过 `git diff --exit-code HEAD -- src/` + build + `git diff --exit-code cordis.patch.yml`）：
+
+| commit | 内容 | 验证 |
+| --- | --- | --- |
+| `c183f04` | 计划文档（G0 通过版） | — |
+| `9aee128` | c1：registry + checklists + 双循环套件（与旧拷贝并存） | 228 tests / 0 fail / 1 skip（= 190 + 27 + 11，逐位吻合） |
+| `dcfe1ef` | c2：删 12 拷贝 + structure 守卫（负控红验证）+ gate/audit/manifest 派生化 | 281 tests / 0 fail / 1 skip；组合层恰 49 |
+| `23968e2` | c3：install-fixtures.mjs 三合一 + scripts 收敛 + 三处文案 | `test:all` 全绿（281/0/1）；PKG-SCOPE-OK |
+| `237c5c2` | c4：docs-sync 双扩展 | 4 tests 全绿；README 三负控 + description 负控全红（log 落 scratch） |
+| c5 | §5.0/§2/§5.1 + DESIGN + CHANGELOG + 本节 | 见最终验证 |
+
+**分套实测**：gate **131**（37 保留 + 1 正负例循环 + 1 fixture 循环 + 90 N×N + 2 unknown，与公式逐位吻合）；manifest **8**（14 − 8 + 2）；audit-candidate 11；structure 3；docs-sync 4（c4 起）；组合层 49；顶层合计 234，全仓 **283**（c2/c3 阶段为 281，c4 +2）。计划预期 ≈289±10，实际 283（偏差 −6 在容差内；偏差来源：计划期顶层算术把 manifest 记为 −8+8，实为 −8+2——Task 8 期望已按「恰 8」修正，但 ≈289 行未同步，属计划文档内部数字笔误，非覆盖缺口）。
+
+**附录 A 核销**：35 旧组合 test 逐行验证落位（9 active 循环 + 18 相邻 dormant + 10 npm 块 + 1 移植回归 = 38 ≥ 35）；rc152 双向、evaluateGate 7→10、N×N 16→90、npm-flat 补 0.1.5-rc.2、v1 indexMarker 等增强项全部到位。
+
+**实施偏差记录**（均为断言面 ≥ 计划或等价，无覆盖损失）：
+1. GATE_VERSIONS 派生断言最终形态为「与按序去重的 flatMap 相等 + 去重前后计数一致（每版本恰 runtime/connection 各一次）」——比计划的直比 flatMap 更精确（直比会因 20 vs 10 项恒红，实施时发现并修正）。
+2. manifest 循环① 发现 rc15/rc17 别名**双重身份**（fixture 别名 = 所在代际构建锚，合法驻留 devDeps）：该二别名跳过 devDep 缺席断言，其精确 spec 由循环②守——语义严格 ⊇ 旧八块。
+3. 相邻 dormant 测试用 3 行 ROWS（不挂探针行）：旧文件挂探针但对其零断言（惰性脚手架），删除无断言损失，并规避 v1 官方连接上的探针兼容风险。
+4. 统一探针名 `dsh-sba-gen-probe` 取代逐版本探针名（名称差异，语义同构；每测试独立闭包状态取代旧文件模块级可变状态）。
+5. 环境实录：开工时本地 node_modules 缺 v4 代际 9 个别名包（Task 5 Step 1 的目录级守卫不足以及时发现内容级缺失），先跑一次旧 `test:rc17-fixture` 补齐后再进 c1——c3 后该问题类由 `test:fixtures` 单命令消除。
+
+**0.2.1-rc.4 纸面推演**（最终验证 4）：按新 §5.0 走——audit-candidate 判级 → compatibility.ts 加 pair（1 处）→ registry 加一行（1 处）→ 文档五件（docs-sync 四重守卫：存在性 ×3 文档 + 表行 + 代际分组位置感知）→ package.json description（docs-sync 有序相等守卫）→ `npm version` → `test:all`。无测试字面量、无新拷贝文件（structure 守卫禁止回潮）；代码侧触点恰两处。✅
+
+**最终验证**（c5 commit 前执行）：`test:all`→`npm test` 283/0 fail/1 skip；src/ 与 patch 双断言干净；`git diff --exit-code 23968e2 -- package.json` 干净（c4/c5 未触碰 package.json）。
