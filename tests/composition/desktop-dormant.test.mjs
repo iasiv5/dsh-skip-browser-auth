@@ -18,7 +18,7 @@ test('desktop host profile forces full dormancy even when the version pair is wh
       import('webserver-rc202'),
     ])
   } catch {
-    assert.fail('先运行 npm run test:rc17-fixture（提供 rc202 系别名包）')
+    assert.fail('先运行 npm run test:fixtures（提供 rc202 系别名包）')
     return
   }
 

@@ -22,7 +22,7 @@ test('desktop + user-layer pin forcing the replacement row active stays a silent
       import('webserver-rc202'),
     ])
   } catch {
-    assert.fail('先运行 npm run test:rc17-fixture（提供 rc202 系别名包）')
+    assert.fail('先运行 npm run test:fixtures（提供 rc202 系别名包）')
     return
   }
 
