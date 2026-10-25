@@ -100,3 +100,18 @@ test('README generation grouping is position-aware (each profile segment/line ho
   }
   assert.deepEqual(problems, [])
 })
+
+// G2 评审计划外建议①（2026-10-25 落地）：§6 已通过清单纳入版本存在性守卫——
+// 收编新版本时 §6 是第六处需要同步的文档位，漏改从此必红（此前仅 README/
+// GLOSSARY/DESIGN 三处被守）。基线前提：§6 各行以完整版本串命名（G2 时已把
+// 「0.1.5」类简称改写为精确版本）。
+test('COMPATIBILITY §6 已通过清单 names every whitelisted version', () => {
+  const compat = readFileSync(new URL('../docs/COMPATIBILITY.md', import.meta.url), 'utf8')
+  const start = compat.indexOf('## 6. ')
+  assert.ok(start !== -1, '§6 章节必须存在')
+  const next = compat.indexOf('\n## ', start + 1)
+  const section = compat.slice(start, next === -1 ? compat.length : next)
+  for (const version of GATE_VERSIONS) {
+    assert.ok(section.includes(version), `§6 已通过清单缺 ${version}（收编新版本时第六处文档位）`)
+  }
+})

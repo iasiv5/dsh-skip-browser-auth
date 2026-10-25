@@ -425,12 +425,12 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 已通过：
 
 - profile exact pair、mixed pair、unknown pair、path/manifest drift、npm/pnpm fallback
-- 0.1.2 legacy active composition
-- 0.1.5 真实 npm package carrier-neutral composition
+- 0.1.2-rc.1 legacy active composition
+- 0.1.5-rc.1 真实 npm package carrier-neutral composition
 - 0.1.5-rc.2 真实 npm package carrier-neutral composition（含跨 patch 混合 dormant，见 §5.3）
-- 0.1.5 `connection.rpc.handle()` dedicated channel 不再返回 405
-- 0.1.5 exact `/api` streaming Fetch route
-- 0.1.5 recovery/profile index globals
+- 0.1.5-rc.1 `connection.rpc.handle()` dedicated channel 不再返回 405
+- 0.1.5-rc.1 exact `/api` streaming Fetch route
+- 0.1.5-rc.1 recovery/profile index globals
 - 0.1.7-rc.2 真实 npm package carrier-neutral-v3 composition（§5.4：admit/OperatorPeer、waterfall、303 `./`、dedicated RPC 非 405、双向跨代际混合 dormant、npm flat 布局）
 - 0.1.7-rc.1 真实 npm package carrier-neutral-v3 composition（§5.5：full active checklist、同代际跨 patch 混合双向 dormant、跨代际 dormant、npm flat 布局）
 - 0.2.0-rc.1 真实 npm package carrier-neutral-v3 composition（§5.6：full active checklist、跨 minor 混合双向 dormant、跨代际 dormant、npm flat 布局）

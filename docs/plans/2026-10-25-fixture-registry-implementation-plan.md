@@ -270,6 +270,7 @@ export const GENERATION_CHECKLISTS // {profileId: {trustedRowId, indexMarker:Reg
 ## 最终验证
 
 1. `npm run test:all` → 0 fail、恒定 1 skip；分套计数：组合层**恰 49**（46−35+27+11）、`tests/structure.test.mjs` **恰 3**、`tests/docs-sync.test.mjs` **恰 4**（2 旧 + 2 新）、`tests/gate.test.mjs` **131**（Task 7 公式）；顶层其余文件块数不变。全仓总量预期 ≈289（240 顶层 + 49 组合；块粒度合并允许 ±10 偏差，以附录 A 逐行核销 + 0 fail 为准，实测值记入结果节）。
+   > 勘误（2026-10-25，G2 评审后补）：本行 ≈289 预算含计划期算术笔误——manifest 期望记为 −8+8，实为 −8+2；实测全仓 283（偏差 −6，容差内），成因与明细见文末「结果」节。历史文档按惯例不改写正文数值，仅留此注。
 2. `git diff --exit-code HEAD -- src/ && npm run build && git diff --exit-code cordis.patch.yml` → 均干净（src/ 为直接断言、对 HEAD 比较覆盖 staged+unstaged（R2-01）；patch 为双保险，理由见执行纪律）。
 3. 附录 A 对账表逐行核销：35 个旧 test 的每条断言有新对应，rc152/npm-flat-rc152 等增强项已标注。
 4. **0.2.1-rc.4 纸面推演**：按新 §5.0 清单走一遍，确认触点 = compatibility.ts + registry + docs（守卫覆盖）+ package.json description + npm version，无测试字面量、无新拷贝文件。

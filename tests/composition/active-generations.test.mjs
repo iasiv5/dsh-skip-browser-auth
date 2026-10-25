@@ -158,6 +158,15 @@ for (const entry of FIXTURE_ENTRIES) {
       body: 'evil',
     })
     assert.equal(evil.status, 403)
+    // evil host 走 dedicated RPC 路径同样 403（栅栏先于通道分发；旧 active-rc15 独有
+    // 形态，G2 评审建议③补强回循环）。
+    const evilRpc = await rawRequest(port, {
+      path: '/dsh-sba-gen-probe/hello',
+      method: 'POST',
+      headers: { host: 'evil.example', 'content-type': 'application/json' },
+      body: JSON_ENVELOPE,
+    })
+    assert.equal(evilRpc.status, 403)
     if (checklist.waterfall) {
       assert.equal(probe.state.waterfallSeen.filter((url) => url === '/api/dsh-sba-fetch-probe').length, 1)
     }
