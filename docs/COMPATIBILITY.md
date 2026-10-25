@@ -164,7 +164,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 1. `npm run audit-candidate -- <candidate>` 判级——RE-PUBLISH / REPUBLISH-WITH-REVIEW 才走本清单（退出码 0）；
 2. `src/compatibility.ts`：相应代际 `pairs` 追加 pair + 代际注释补一段审计结论指针（§5.N）；
-3. `tests/fixtures/registry.mjs`：`VERSION_FIXTURES` 追加一行条目（`version` / `profileId` / `aliasSuffix` / `aliases` 三件）——active-generations 的 active 全链路与相邻对 dormant、npm-flat-generations 循环、manifest 别名守卫、gate 派生断言与安装器 `installSpecs()` **全部自动纳入**；`npm run test:fixtures` 以别名安装真实包；
+3. `tests/fixtures/registry.mjs`：`VERSION_FIXTURES` 追加一行条目（`version` / `profileId` / `aliasSuffix` / `aliases` 三件）——active-generations 的 active 全链路与相邻对 dormant、npm-flat-generations 循环、manifest 别名守卫、gate 派生断言与安装器 `installSpecs()` **全部自动纳入**；装/升前先 `npm run test:fixtures -- --check` 零安装验在场，缺再 `npm run test:fixtures` 以别名安装真实包；
 4. 文档五件：`README.md`（版本列表×2、代际分组句、兼容表 pair 行、提示块行、mixed text 例）、`GLOSSARY.md`（profile 行、whitelist 行）、`docs/DESIGN.md`（代际表、不得激活清单、行状态表）、本文（§5.N 审计记录 + §6 已通过行）、`CHANGELOG.md` 新条目——README/GLOSSARY/DESIGN 由 docs-sync 强制（存在性 + 代际分组位置感知），漏改直接红；
 5. `package.json` description 版本列表 → `npm version <x.y.z> --no-git-tag-version --ignore-scripts`（同步 lock 根字段两处，know-how 031 同款纪律）；description 紧凑记法展开与白名单的**有序相等**由 docs-sync 强制；
 6. `npm run test:all` 全绿（失败数必须为 0；恒定 1 skip 为环境条件项）→ commit + tag + push，发布轮询按 know-how 018。
