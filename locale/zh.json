@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Skip DSH Browser Auth（@iasiv5/dsh-skip-browser-auth）",
+    "description": "跳过浏览器授权，免输 Token 直接接入；仅支持 web profile。"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Skip DSH Browser Auth (@iasiv5/dsh-skip-browser-auth)",
+    "description": "Skips browser authorization and connects without entering a token; web profile only."
+  }
+}
