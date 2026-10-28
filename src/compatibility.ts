@@ -149,11 +149,20 @@ export const COMPATIBILITY_PROFILES = [
     // ADDED row (entry-customization) with the connection row field-identical
     // and presets/ byte-identical. rc21 keeps anchoring at 0.2.1-rc.1; no
     // second 0.2.1-line build input is introduced.
+    //
+    // 0.2.1-rc.4 joined this generation after a tarball audit (§5.12): a pure
+    // rc.2-style republish on the contract face — every anchor package
+    // (connection/webserver/scope/frontend-static/app-boot/web-app/runtime)
+    // ships manifest-only bumps, invariants remains unpublished on both sides,
+    // and web-app's patch diff is empty for the first time in the 0.2.1 line
+    // (no ADDED rows at all, connection row field-identical). rc21 keeps
+    // anchoring at 0.2.1-rc.1; no second 0.2.1-line build input is introduced.
     id: 'carrier-neutral-v4',
     pairs: [
       { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
       { runtime: '0.2.1-rc.2', connection: '0.2.1-rc.2' },
       { runtime: '0.2.1-rc.3', connection: '0.2.1-rc.3' },
+      { runtime: '0.2.1-rc.4', connection: '0.2.1-rc.4' },
     ],
     hostAdapter: 'carrier-neutral-021',
     clientVariant: 'rc21',

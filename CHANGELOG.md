@@ -4,6 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.6] - 2026-10-28
+
+- 新增 DSH `0.2.1-rc.4` 支持：`npm run audit-candidate` 审计为契约面等价重发布（**RE-PUBLISH**）——0.2.1 线至今最干净的一轮，八个锚点包全部仅 manifest bump（首个 web-app patch **零 diff** 的收编轮，无任何 ADDED 行），connection 行逐字段一致；按 §5.1 作为第四个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.12），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）
+- 测试：登记表追加 `*-rc214` 真实 npm fixture 别名，`active-generations` / `npm-flat-generations` 循环套件自动扩展到 rc.4（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合 dormant）
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`
+
 ## [0.4.4] - 2026-10-25
 
 - 测试与文档打磨（**无产品变更，白名单与运行行为不变**）：G2 实施评审三条计划外建议落地——① COMPATIBILITY §6 已通过清单纳入 docs-sync 版本存在性守卫（收编新版本时第六处文档位漏改必红；§6 代际句同步精确到完整版本串）；② active-generations 循环补 evil-host 走 dedicated RPC 路径的 403 断言（旧 active-rc15 独有形态回收，栅栏先于通道分发）；③ 实施计划 ≈289 预期行补勘误注；新增 `docs/BACKLOG.md` 承载评审建议的落盘与核销

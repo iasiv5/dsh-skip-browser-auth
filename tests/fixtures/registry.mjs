@@ -118,6 +118,16 @@ export const VERSION_FIXTURES = [
       webServer: 'webserver-rc213',
     },
   },
+  {
+    version: '0.2.1-rc.4',
+    profileId: 'carrier-neutral-v4',
+    aliasSuffix: 'rc214',
+    aliases: {
+      connection: 'dsh-client-connection-rc214',
+      frontendStatic: 'frontend-static-rc214',
+      webServer: 'webserver-rc214',
+    },
+  },
 ]
 
 /**
