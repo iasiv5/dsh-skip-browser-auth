@@ -4,6 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.7] - 2026-10-30
+
+- 新增 DSH `0.2.1-rc.5` 支持：`npm run audit-candidate` 审计为契约面等价重发布（**RE-PUBLISH**）——八个锚点包全部仅 manifest bump（invariants 持续停更），web-app patch 连续第二轮 **零 diff**，connection 行逐字段一致；按 §5.1 作为第五个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.13），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）
+- 测试：登记表追加 `*-rc215` 真实 npm fixture 别名，`active-generations` / `npm-flat-generations` 循环套件自动扩展到 rc.5（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合 dormant）
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`
+
 ## [0.4.6] - 2026-10-28
 
 - 新增 DSH `0.2.1-rc.4` 支持：`npm run audit-candidate` 审计为契约面等价重发布（**RE-PUBLISH**）——0.2.1 线至今最干净的一轮，八个锚点包全部仅 manifest bump（首个 web-app patch **零 diff** 的收编轮，无任何 ADDED 行），connection 行逐字段一致；按 §5.1 作为第四个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.12），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）

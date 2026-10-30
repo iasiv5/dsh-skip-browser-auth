@@ -439,6 +439,25 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 第 6 条（真实 DSH 0.2.1 宿主 active checklist）待宿主升级 `0.2.1-rc.4` 后按清单执行并回填（BrowserAuth 跳过横幅 + 无 token `GET /` 200）。
 
+### 5.13 审计记录：`0.2.1-rc.5` 加入 `carrier-neutral-v4`（2026-10-30）
+
+结论：**`0.2.1-rc.5` 通过 §5.1 全部条件，作为第五个 pair 加入 `carrier-neutral-v4`**，未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1，不引入第二个 0.2.1 线构建输入）。
+
+审计方法：`npm run audit-candidate -- 0.2.1-rc.5`（基准自动取 `0.2.1-rc.4`）。逐包结果：
+
+| 包 | 0.2.1-rc.4 → 0.2.1-rc.5 差异 |
+| --- | --- |
+| `@deepseek-ai/dsh-client-connection` / `dsh-host-webserver` / `dsh-scope` / `dsh-host-frontend-static` / `dsh-app-boot` / `dsh-web-app` / `dsh`（runtime 本体） | 均仅 package.json/README/docs |
+| `@deepseek-ai/dsh-invariants` | 两侧均未发布（0.2.1 线停更延续，无对比物，非差异） |
+
+即 `0.2.1-rc.5` 连续第二轮「契约面等价重发布」，web-app patch 连续第二轮 **零 diff**，connection 行逐字段一致。第 4–5 条由本轮测试满足：
+
+- gate 探针/profile 解析：`0.2.1-rc.5` 精确对正例；同代际跨 patch 混合负例由 gate 全 N×N 循环自动覆盖（必须 dormant）。
+- 真实 npm fixture：登记表追加 `*-rc215` 别名（真实 0.2.1-rc.5 包），`active-generations` / `npm-flat-generations` 循环套件自动扩展到 rc.5（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）。
+- `tests/manifest.test.mjs`：rc215 保持 fixture-only 别名。
+
+第 6 条（真实 DSH 0.2.1 宿主 active checklist）待宿主升级 `0.2.1-rc.5` 后按清单执行并回填（BrowserAuth 跳过横幅 + 无 token `GET /` 200）。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -458,6 +477,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 0.2.1-rc.2 真实 npm package carrier-neutral-v4 composition（§5.10：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - 0.2.1-rc.3 真实 npm package carrier-neutral-v4 composition（§5.11：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - 0.2.1-rc.4 真实 npm package carrier-neutral-v4 composition（§5.12：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
+- 0.2.1-rc.5 真实 npm package carrier-neutral-v4 composition（§5.13：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - rc2 dormant 基线
 - 三个官方 client factory materialization 和 unknown profile fail-closed
 - `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。
