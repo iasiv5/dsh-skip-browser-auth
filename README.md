@@ -79,7 +79,7 @@ sudo systemctl restart deepseek-harness.service
 | `0.2.1-rc.2` + `0.2.1-rc.2` | `carrier-neutral-v4` | 同上（0.2.1-rc.2 为契约面等价重发布：web-app patch 仅新增非 connection 行，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 0.2.1-rc.2 npm fixture 组合测试，见 docs/COMPATIBILITY.md §5.10；实机 checklist 待宿主升级后回填） |
 | `0.2.1-rc.3` + `0.2.1-rc.3` | `carrier-neutral-v4` | 同上（0.2.1-rc.3 为契约面等价重发布：web-app patch 仅新增非 connection 行，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 rc.3 fixture 测试，见 docs/COMPATIBILITY.md §5.11；2026-10-25 Web 实测：BrowserAuth 横幅出现、无 token GET / 返回 200） |
 | `0.2.1-rc.4` + `0.2.1-rc.4` | `carrier-neutral-v4` | 同上（0.2.1-rc.4 为契约面等价重发布：首个 web-app patch 零 diff 的收编轮，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 rc.4 fixture 测试，见 docs/COMPATIBILITY.md §5.12；实机 checklist 待宿主升级 rc.4 后回填） |
-| `0.2.1-rc.5` + `0.2.1-rc.5` | `carrier-neutral-v4` | 同上（0.2.1-rc.5 为契约面等价重发布：web-app patch 连续第二轮零 diff，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 rc.5 fixture 测试，见 docs/COMPATIBILITY.md §5.13；实机 checklist 待宿主升级 rc.5 后回填） |
+| `0.2.1-rc.5` + `0.2.1-rc.5` | `carrier-neutral-v4` | 同上（0.2.1-rc.5 为契约面等价重发布：web-app patch 连续第二轮零 diff，connection 行逐字段一致） | ✅ active（npm diff 审计 + 真实 rc.5 fixture 测试，见 docs/COMPATIBILITY.md §5.13；2026-10-30 Web 实测：BrowserAuth 横幅出现、无 token GET / 返回 200） |
 | desktop profile（存在 dsh-desktop-host 的环境，任意版本对） | — | 😴 dormant-by-design：desktop 一律休眠 | dormant |
 | 其它版本或混合版本对 | — | 😴 自动休眠：官方行为分毫不变 | dormant |
 

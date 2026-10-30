@@ -456,7 +456,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 真实 npm fixture：登记表追加 `*-rc215` 别名（真实 0.2.1-rc.5 包），`active-generations` / `npm-flat-generations` 循环套件自动扩展到 rc.5（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）。
 - `tests/manifest.test.mjs`：rc215 保持 fixture-only 别名。
 
-第 6 条（真实 DSH 0.2.1 宿主 active checklist）待宿主升级 `0.2.1-rc.5` 后按清单执行并回填（BrowserAuth 跳过横幅 + 无 token `GET /` 200）。
+第 6 条（真实 DSH 0.2.1 宿主 active checklist）已在 2026-10-30 的 DSH Web `0.2.1-rc.5` 宿主（npm -g 裸装形态）通过：启动日志出现 BrowserAuth 跳过横幅恰一次，未携带 token 的 `GET /` 返回 200，`skipping profile bundle` 为 0；`did not activate=1` + `waiting for service: webRuntime`=1 为 0.4.x 双代门控既有基线，非回归。
 
 ## 6. 当前验证状态
 
