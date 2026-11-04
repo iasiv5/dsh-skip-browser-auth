@@ -481,7 +481,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 真实 npm fixture：登记表追加 `*-rc221` 别名（真实 0.2.2-rc.1 包），`active-generations` / `npm-flat-generations` 循环套件自动扩展到 0.2.2-rc.1（full active checklist + `/connect` 302/400/403 + 同代际跨 minor 混合双向 dormant）——**组合套件直接运行真实 0.2.2-rc.1 的 webserver（resource 分发）与 frontend-static（shim + `browserPeer` 消费），本轮两项新消费面由实证覆盖，非纯推理**。
 - `tests/manifest.test.mjs`：rc221 保持 fixture-only 别名。
 
-第 6 条（真实 DSH 0.2.2 宿主 active checklist）待宿主升级 `0.2.2-rc.1` 后按清单执行并回填（BrowserAuth 跳过横幅 + 无 token `GET /` 200 + `skipping profile bundle`=0）。
+第 6 条（真实 DSH 0.2.2 宿主 active checklist）已在 2026-11-04 的 DSH Web `0.2.2-rc.1` 宿主（Host A＝pnpm runtime 形态）通过：启动日志出现 BrowserAuth 跳过横幅恰一次，未携带 token 的 `GET /` 返回 200；`skipping profile bundle` 恰 1 条且为第三方 dsh-ops@0.4.4（其 `engines.dsh` 上界 `<0.2.2-0` 排除 rc.1，与本插件无关），本插件守卫零拒载。Desktop 仍按设计休眠。
 
 ## 6. 当前验证状态
 
