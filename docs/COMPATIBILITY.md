@@ -458,6 +458,31 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 第 6 条（真实 DSH 0.2.1 宿主 active checklist）已在 2026-10-30 的 DSH Web `0.2.1-rc.5` 宿主（npm -g 裸装形态）通过：启动日志出现 BrowserAuth 跳过横幅恰一次，未携带 token 的 `GET /` 返回 200，`skipping profile bundle` 为 0；`did not activate=1` + `waiting for service: webRuntime`=1 为 0.4.x 双代门控既有基线，非回归。
 
+### 5.14 审计记录：`0.2.2-rc.1` 加入 `carrier-neutral-v4`（2026-11-04）
+
+结论：**`0.2.2-rc.1` 经逐维替换面审计后通过 §5.1 全部条件，作为第六个 pair 加入 `carrier-neutral-v4`**，未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1，不引入第二个构建输入）。本轮为**首个机器判级 CONTRACT-CHANGED 而逐维人工定性收编**的轮次：机械判级的全部阻断项均被逐文件对照定性为「非替换面」。0.2.2-rc.1 是新 minor 线首轮（dist-tag `next`），非 rc.N 顺延。
+
+审计方法：`npm run audit-candidate -- 0.2.2-rc.1`（基准自动取 `0.2.1-rc.5`，机器初判 CONTRACT-CHANGED，退出码 3——阻断项为未配对 locale 文件与四个锚点包的真实代码 diff）；随后对八个锚点包两版 tarball 逐文件 `diff` 人工定性。逐包结果：
+
+| 包 | 0.2.1-rc.5 → 0.2.2-rc.1 差异 | 人工定性 |
+| --- | --- | --- |
+| `@deepseek-ai/dsh-client-connection` | 仅 `lib/types/client/index.d.ts` 新增可选 `resolveAsset?`（worker 隧道资产解析器，缺省缺席）+ 新增 `locale/` 六件 | **替换面逐字节一致**：`lib/index.js`（admit/Peer/authorizeConnect/bridge/createSharedFetchHandler 全部在内）与 `lib/client.browser.js`（rc21 构建锚）均无 diff；类型为增量可选成员 [非阻断] |
+| `@deepseek-ai/dsh-host-webserver` | 新增 resource 路由形态（route/fallback 可给 `{ resource }` 应答 GET/HEAD、`readResource()`/`serveResource()`/`writeResponse()`），`collectIndexInjections`/`renderIndex` 加 `peer` 尾参；types 同步 | handler 路由分发逐行为等价：`responderFor` 分支里 function（含旧 handler fallback）仍走 `await responder(req, res)` 原语义，resource 是并行新增路径；`register(handler)`、route 匹配（exact + 最长 prefix）、waterfall 契约未动 [非阻断] |
+| `@deepseek-ai/dsh-scope` | 仅 package.json/README/docs | 无阻断 |
+| `@deepseek-ai/dsh-invariants` | 两侧均未发布（0.2.1 线停更延续，无对比物，非差异） | — |
+| `@deepseek-ai/dsh-host-frontend-static` | fallback 由 handler 重构为 resource 形态注册；非索引文件新增弱 ETag/304 缓存；`authorizeIndex` 消费改为「Fetch Request + writeHead/end shim，返回 falsy 时以 shim 收集值构造 refusal Response」 | shim 逐字模拟 node res 语义，**官方 browserAuth（web-app `lib/` 全量零 diff）零改动即兼容即活证据**；插件 stub 的 `authorizeIndex` 只读 `.method`/`.url`/`.headers`，trust-fence 自带 `headers instanceof Headers` 双形态分支（`ConnectionTrustRequest` 类型注释即「Fetch 或 node:http 双表示」），Fetch Request 入参天然兼容；新消费 `ctx.connection.browserPeer` 为官方 `HostConnectionService` 自有属性（两代 connection lib 逐字同款、各 4 处，替换服务即官方类实例化，构造时自注册 `ctx.connection`）[非阻断] |
+| `@deepseek-ai/dsh-app-boot` | `lib/index.js` 重构：新增 `dsh.bundle.platforms` 可选声明（未声明 = 全平台放行，`assertBundlePlatform` 对 `void 0` 早退）+ startup-diagnostics；`official-bundles*.d.ts` 三件移出至新包 `@deepseek-ai/dsh-official-bundles`（`PROFILE_TEMPLATES`/`DEFAULT_PROFILE_BUNDLES` 新家）；worker bootstrap 同步 | 平台门为 OS 维度（`process.platform`）且可选字段缺省放行（插件包无此字段）；profile patch 读取链 imports（`readProfilePatches`/`loadOverlayPatches`/`reportSkippedBundles`/`PROFILE_PATCH_FILENAME`）逐字一致 [非阻断] |
+| `@deepseek-ai/dsh-web-app` | `lib/` 全量零 diff；四个 patch YAML 变化均为 UI bundle 行增删（`message-quotes`/`ui-file-drag`/`deliverable-file-references`/`ui-file-actions`/`ui-context-menu` 增，`ui-deepseek-model-label-1017`/`tool-subagent-list-agents` 删）+ tools 行 PTC env seam 移除 | **connection 行逐字段一致**（审计脚本实测）；gate 行绑定断言的官方行 id/name 形状不变 [非阻断] |
+| `@deepseek-ai/dsh`（runtime 本体） | `lib/bin.js`/`lib/profile-boot.js` 越出良性白名单；4 个 chunk 改名且内容有差异 | chunk diff 逐行核对：全部为 import 重排（chunk 哈希改名联动 + `PROFILE_TEMPLATES`/`DEFAULT_PROFILE_BUNDLES` 改从 `dsh-official-bundles` 导入），`authorizeIndex`/BrowserAuth/trustedHosts/connection 零命中；loader seam `resolveSync` 用法逐行一致（审计脚本实测）；gate 探针读 `@deepseek-ai/dsh/package.json` manifest 版本不受影响 [非阻断] |
+
+即 0.2.2-rc.1 的机械阻断项 = 未配对 locale 文件（机械分类器不豁免 locale）+ webserver/frontend-static/app-boot/runtime 的**非替换面**代码演进；§5.1 第 1–3 条（host 入口/构造器/`requestRejection`/`createSharedFetchHandler`/route/body 契约、adapter 无分支、client bundle 契约）由「逐字节一致 + 逐行为等价」直接满足，不满足任一条即不得收编（本轮如 frontend-static shim 语义有出入，第 5 条组合测试会红，fail-closed）。第 4–5 条由本轮测试满足：
+
+- gate 探针/profile 解析：`0.2.2-rc.1` 精确对正例；同代际跨 minor 混合负例由 gate 全 N×N 循环自动覆盖（必须 dormant）。
+- 真实 npm fixture：登记表追加 `*-rc221` 别名（真实 0.2.2-rc.1 包），`active-generations` / `npm-flat-generations` 循环套件自动扩展到 0.2.2-rc.1（full active checklist + `/connect` 302/400/403 + 同代际跨 minor 混合双向 dormant）——**组合套件直接运行真实 0.2.2-rc.1 的 webserver（resource 分发）与 frontend-static（shim + `browserPeer` 消费），本轮两项新消费面由实证覆盖，非纯推理**。
+- `tests/manifest.test.mjs`：rc221 保持 fixture-only 别名。
+
+第 6 条（真实 DSH 0.2.2 宿主 active checklist）待宿主升级 `0.2.2-rc.1` 后按清单执行并回填（BrowserAuth 跳过横幅 + 无 token `GET /` 200 + `skipping profile bundle`=0）。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -478,6 +503,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 0.2.1-rc.3 真实 npm package carrier-neutral-v4 composition（§5.11：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - 0.2.1-rc.4 真实 npm package carrier-neutral-v4 composition（§5.12：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - 0.2.1-rc.5 真实 npm package carrier-neutral-v4 composition（§5.13：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
+- 0.2.2-rc.1 真实 npm package carrier-neutral-v4 composition（§5.14：full active checklist、`/connect` 交换端点、同代际跨 minor 混合双向 dormant、npm flat 布局）
 - rc2 dormant 基线
 - 三个官方 client factory materialization 和 unknown profile fail-closed
 - `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。

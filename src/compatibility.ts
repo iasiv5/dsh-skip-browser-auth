@@ -165,6 +165,23 @@ export const COMPATIBILITY_PROFILES = [
     // and web-app's patch diff stays empty for a second consecutive round
     // (connection row field-identical). rc21 keeps anchoring at 0.2.1-rc.1;
     // no second 0.2.1-line build input is introduced.
+    //
+    // 0.2.2-rc.1 joined this generation after a per-dimension tarball audit
+    // (§5.14): the mechanical grader returned CONTRACT-CHANGED (unpaired locale
+    // files plus real webserver/frontend-static/app-boot diffs), but every
+    // §5.1 admission condition holds on the replacement face — connection
+    // lib/index.js and lib/client.browser.js are byte-identical (client types
+    // add an optional resolveAsset? only), the official patch's connection row
+    // is field-identical, and the surrounding diffs are additive or
+    // internal-only: the webserver keeps handler-route dispatch line-identical
+    // (resource routes are a new parallel path), frontend-static still drives
+    // the same authorizeIndex(request, res-shim) truthy/falsy contract against
+    // the official browserPeer the replacement instantiates, app-boot's new
+    // dsh.bundle.platforms field is optional (omission allows every platform),
+    // and the runtime diff is chunk-hash renames with the loader resolveSync
+    // seam line-identical. The real 0.2.2-rc.1 fixture composition exercises
+    // the new webserver/frontend-static packages directly (§5.14 item 5).
+    // rc21 keeps anchoring at 0.2.1-rc.1; no second build input is introduced.
     id: 'carrier-neutral-v4',
     pairs: [
       { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
@@ -172,6 +189,7 @@ export const COMPATIBILITY_PROFILES = [
       { runtime: '0.2.1-rc.3', connection: '0.2.1-rc.3' },
       { runtime: '0.2.1-rc.4', connection: '0.2.1-rc.4' },
       { runtime: '0.2.1-rc.5', connection: '0.2.1-rc.5' },
+      { runtime: '0.2.2-rc.1', connection: '0.2.2-rc.1' },
     ],
     hostAdapter: 'carrier-neutral-021',
     clientVariant: 'rc21',

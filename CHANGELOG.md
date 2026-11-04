@@ -4,6 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.8] - 2026-11-04
+
+- 新增 DSH `0.2.2-rc.1` 支持：`npm run audit-candidate` 机械初判 CONTRACT-CHANGED（新 0.2.2 minor 线首轮，非 rc.N 顺延）——逐维 tarball 审计定性为替换面未变：connection `lib/index.js` 与 `lib/client.browser.js` 逐字节一致（client 类型仅新增可选 `resolveAsset?`）、官方 patch connection 行逐字段一致，其余差异均为非替换面演进（webserver resource 路由为并行新增路径；frontend-static 的 authorizeIndex shim 逐字模拟 node res 语义 + 新读官方 `browserPeer`，替换服务即官方类实例化天然暴露；app-boot `dsh.bundle.platforms` 可选缺省放行；runtime 为 chunk 改名 + import 重排）；按 §5.1 作为第六个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.14），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）
+- 测试：登记表追加 `*-rc221` 真实 npm fixture 别名，`active-generations` / `npm-flat-generations` 循环套件自动扩展到 0.2.2-rc.1（full active checklist + `/connect` 302/400/403 + 同代际跨 minor 混合 dormant）；组合套件直接运行真实 0.2.2-rc.1 webserver/frontend-static，两项新消费面（shim 兼容、browserPeer）由实证覆盖
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`、`0.2.2-rc.1`
+
 ## [0.4.7] - 2026-10-30
 
 - 新增 DSH `0.2.1-rc.5` 支持：`npm run audit-candidate` 审计为契约面等价重发布（**RE-PUBLISH**）——八个锚点包全部仅 manifest bump（invariants 持续停更），web-app patch 连续第二轮 **零 diff**，connection 行逐字段一致；按 §5.1 作为第五个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.13），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）
