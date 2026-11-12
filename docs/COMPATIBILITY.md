@@ -483,6 +483,31 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 第 6 条（真实 DSH 0.2.2 宿主 active checklist）已在 2026-11-04 的 DSH Web `0.2.2-rc.1` 宿主（Host A＝pnpm runtime 形态）通过：启动日志出现 BrowserAuth 跳过横幅恰一次，未携带 token 的 `GET /` 返回 200；`skipping profile bundle` 恰 1 条且为第三方 dsh-ops@0.4.4（其 `engines.dsh` 上界 `<0.2.2-0` 排除 rc.1，与本插件无关），本插件守卫零拒载。Desktop 仍按设计休眠。
 
+### 5.15 审计记录：`0.2.2-rc.2` 加入 `carrier-neutral-v4`（2026-11-12）
+
+结论：**`0.2.2-rc.2` 经打包层审计后通过 §5.1 全部条件，作为第七个 pair 加入 `carrier-neutral-v4`**，未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1，不引入第二个构建输入）。本轮机械判级 CONTRACT-CHANGED 的全部阻断项均为打包层：rc.2 起锚点包 tarball 随附源码与 sourcemap（release note「npm 安装与桌面端随附对应版本的源码和文档」），两处核心 bundle 改为压缩重打包，runtime tarball 新增随附文档树。
+
+审计方法：`npm run audit-candidate -- 0.2.2-rc.2`（基准自动取 `0.2.2-rc.1`，机器初判 CONTRACT-CHANGED，退出码 3）；随后对保留的审计目录逐文件人工定性，压缩重打包按语义面复核（导出面/handle 键集合经 Node vm 实例化 `apply()` 对比）。逐包结果：
+
+| 包 | 0.2.2-rc.1 → 0.2.2-rc.2 差异 | 人工定性 |
+| --- | --- | --- |
+| `@deepseek-ai/dsh-client-connection` | `lib/client.browser.js` 由 pretty（1522 行）改为 minified 单行重打包；新增全部 `*.map` 与 `src/**` | **替换面逐字节一致**：`lib/index.js` 与 `lib/client.node.js` 无 diff；同名 `lib/types/**/*.d.ts` 12 件零差异；压缩 bundle 在 vm 中 `apply()` 实例化后 handle 逐键等价（generation/state `{getSnapshot,subscribe}`/rpc `{call}`/openWebSocket/reconnect/registerGenerationSource/start/interactions/isLoopback），导出面同为 `{RpcId,apply,inject,installConnection,transportError}`，ModuleLoader id 与 `inject=[]` 一致，`__DSH_TRANSPORT__`/`__DSH_CONNECTION_RECOVERY__` 消费一致，multipart 二进制解析 rc.1 已有非新增 [非阻断] |
+| `@deepseek-ai/dsh-host-webserver` | 仅新增 `*.map` 与 `src/**` | `lib/index.js` 与同名 d.ts 逐字节一致 [非阻断] |
+| `@deepseek-ai/dsh-scope` | 仅新增 `*.map` 与 `src/**` | `lib/index.js` 与同名 d.ts 逐字节一致 [非阻断] |
+| `@deepseek-ai/dsh-invariants` | 两侧均未发布（该线停更延续，无对比物，非差异） | — |
+| `@deepseek-ai/dsh-host-frontend-static` | 仅新增 `*.map` 与 `src/**` | `lib/index.js` 与同名 d.ts 逐字节一致 [非阻断] |
+| `@deepseek-ai/dsh-app-boot` | `lib/index.js` 增 `wsl` 平台准入（`assertBundlePlatform` 可选 `facts` 参数 + `@deepseek-ai/dsh-native-command` 依赖）与 `.env` home 层 `DEEPSEEK_BASE_URL`/`DEEPSEEK_SEARCH_BASE_URL` 白名单；`bundle-platform.d.ts`/`index.d.ts` 同步；新增 `*.map` 与 `src/**` | REVIEW 类：平台门为本插件不声明的可选字段（缺省放行），`.env` 白名单与 BrowserAuth/connection 无关；`compatibility-preflight.d.ts` rc.1 已存在（本轮仅新增 .map），插件兼容预检层非本轮新增 [非阻断] |
+| `@deepseek-ai/dsh-web-app` | 四个 patch YAML 变化均为非 connection 行（presets 增 `tool-subagent-control.interrupt:false`、`tool-office` 行、`skill-filesystem.customSkillDirs`，根 patch 增 `mcp-manager`/`ui-account-notifications`/office kit 行等）+ 新增 `*.map` 与 `src/**` | **connection 行逐字段一致**（审计脚本实测）；gate 行绑定断言的官方行 id/name 形状不变 [非阻断] |
+| `@deepseek-ai/dsh`（runtime 本体） | `lib/profile-boot.js` 增 `userAgentProfile` 再导出（release note「模型请求的 User-Agent 增加启动配置标记」）；`lib/bin.js` 压缩重打包（白名单内 Desktop CLI）；4 个 chunk 改名且内容有差异；`lib/dump-config-DuXZcU0e.js`（90 字节垫片）单侧移除；新增随附 `docs/` 文档树（含 png/svg/json 静态资产）与 `*.map`、`src/**`、`lib/types/installed-bin.d.ts` | loader seam `resolveSync` 用法逐行一致（审计脚本实测 4/4）；垫片唯一长标识符已被 rc.2 lib 覆盖；gate 探针读 `@deepseek-ai/dsh/package.json` manifest 版本不受影响 [非阻断] |
+
+即 0.2.2-rc.2 的机械阻断项 = 打包清单变化（`src/`+sourcemap 单侧出现、压缩重打包计为代码 diff、docs 资产非 `.md` 计为未配对代码文件）；§5.1 第 1–3 条由「逐字节一致 + 语义面等价」直接满足，不满足任一条即不得收编（如 client handle 契约有出入，第 5 条组合测试会红，fail-closed）。第 4–5 条由本轮测试满足：
+
+- gate 探针/profile 解析：`0.2.2-rc.2` 精确对正例；同代际跨 patch 混合负例由 gate 全 N×N 循环自动覆盖（必须 dormant）。
+- 真实 npm fixture：登记表追加 `*-rc222` 别名（真实 0.2.2-rc.2 包），`active-generations` / `npm-flat-generations` 循环套件自动扩展到 0.2.2-rc.2（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）——组合套件直接运行真实 0.2.2-rc.2 的 webserver 与 frontend-static 包。
+- `tests/manifest.test.mjs`：rc222 保持 fixture-only 别名。
+
+第 6 条（真实 DSH 0.2.2-rc.2 宿主 active checklist）待宿主升级 `0.2.2-rc.2` 后按清单执行并回填（BrowserAuth 跳过横幅 + 无 token `GET /` 200 + `skipping profile bundle`=0）。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -504,6 +529,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 0.2.1-rc.4 真实 npm package carrier-neutral-v4 composition（§5.12：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - 0.2.1-rc.5 真实 npm package carrier-neutral-v4 composition（§5.13：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - 0.2.2-rc.1 真实 npm package carrier-neutral-v4 composition（§5.14：full active checklist、`/connect` 交换端点、同代际跨 minor 混合双向 dormant、npm flat 布局）
+- 0.2.2-rc.2 真实 npm package carrier-neutral-v4 composition（§5.15：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - rc2 dormant 基线
 - 三个官方 client factory materialization 和 unknown profile fail-closed
 - `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。

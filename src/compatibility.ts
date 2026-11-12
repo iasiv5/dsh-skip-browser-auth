@@ -182,6 +182,25 @@ export const COMPATIBILITY_PROFILES = [
     // seam line-identical. The real 0.2.2-rc.1 fixture composition exercises
     // the new webserver/frontend-static packages directly (§5.14 item 5).
     // rc21 keeps anchoring at 0.2.1-rc.1; no second build input is introduced.
+    //
+    // 0.2.2-rc.2 joined this generation after a packaging-layer tarball audit
+    // (§5.15): the mechanical grader returned CONTRACT-CHANGED again, but every
+    // block is packaging — rc.2 tarballs ship sourcemaps plus src/ for every
+    // anchor package, and client.browser.js / runtime bin.js are minified
+    // re-bundles of the same contract. Every §5.1 admission condition holds on
+    // the replacement face — connection lib/index.js and lib/client.node.js are
+    // byte-identical, the minified client re-bundle instantiates a connection
+    // handle structurally equal to rc.1's (vm probe: same export set, inject,
+    // ModuleLoader id, __DSH_TRANSPORT__/__DSH_CONNECTION_RECOVERY__ globals and
+    // handle keys; multipart binary parsing already existed in rc.1), client
+    // types are byte-identical, the official patch's connection row is
+    // field-identical, and app-boot's diffs are the wsl bundle-platform
+    // admission plus .env endpoint names (review-class; compatibility-preflight
+    // pre-existed in rc.1). The runtime diff is the userAgentProfile marker plus
+    // content-changed chunk renames with the loader resolveSync seam
+    // line-identical (4/4). The real 0.2.2-rc.2 fixture composition exercises
+    // the packages directly (§5.15 item 5).
+    // rc21 keeps anchoring at 0.2.1-rc.1; no second build input is introduced.
     id: 'carrier-neutral-v4',
     pairs: [
       { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
@@ -190,6 +209,7 @@ export const COMPATIBILITY_PROFILES = [
       { runtime: '0.2.1-rc.4', connection: '0.2.1-rc.4' },
       { runtime: '0.2.1-rc.5', connection: '0.2.1-rc.5' },
       { runtime: '0.2.2-rc.1', connection: '0.2.2-rc.1' },
+      { runtime: '0.2.2-rc.2', connection: '0.2.2-rc.2' },
     ],
     hostAdapter: 'carrier-neutral-021',
     clientVariant: 'rc21',
