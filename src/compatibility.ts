@@ -201,6 +201,13 @@ export const COMPATIBILITY_PROFILES = [
     // line-identical (4/4). The real 0.2.2-rc.2 fixture composition exercises
     // the packages directly (§5.15 item 5).
     // rc21 keeps anchoring at 0.2.1-rc.1; no second build input is introduced.
+    //
+    // 0.2.2-rc.3 joined this generation on a clean RE-PUBLISH grade (§5.16):
+    // every anchor package (connection/webserver/scope/frontend-static/app-boot/
+    // web-app/runtime) ships manifest/docs-only bumps, invariants remains
+    // unpublished on both sides, and web-app's patch diff stays empty for a
+    // third consecutive round (connection row field-identical). rc21 keeps
+    // anchoring at 0.2.1-rc.1; no second build input is introduced.
     id: 'carrier-neutral-v4',
     pairs: [
       { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
@@ -210,6 +217,7 @@ export const COMPATIBILITY_PROFILES = [
       { runtime: '0.2.1-rc.5', connection: '0.2.1-rc.5' },
       { runtime: '0.2.2-rc.1', connection: '0.2.2-rc.1' },
       { runtime: '0.2.2-rc.2', connection: '0.2.2-rc.2' },
+      { runtime: '0.2.2-rc.3', connection: '0.2.2-rc.3' },
     ],
     hostAdapter: 'carrier-neutral-021',
     clientVariant: 'rc21',
