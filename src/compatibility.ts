@@ -208,6 +208,15 @@ export const COMPATIBILITY_PROFILES = [
     // unpublished on both sides, and web-app's patch diff stays empty for a
     // third consecutive round (connection row field-identical). rc21 keeps
     // anchoring at 0.2.1-rc.1; no second build input is introduced.
+    //
+    // 0.2.2-rc.4 joined this generation on a REPUBLISH-WITH-REVIEW grade (§5.17):
+    // every anchor package ships manifest/docs-only bumps (connection/webserver/
+    // scope/frontend-static/app-boot/web-app; invariants unpublished on both
+    // sides), web-app's patch stays byte-identical, and the runtime's only
+    // non-manifest change is a new upgrade-guide note (streamed content-refusal
+    // error code MALFORMED_RESPONSE → CONTENT_REFUSED, LLM error-classification
+    // surface, outside the connection/BrowserAuth replacement face). rc21 keeps
+    // anchoring at 0.2.1-rc.1; no second build input is introduced.
     id: 'carrier-neutral-v4',
     pairs: [
       { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
@@ -218,6 +227,7 @@ export const COMPATIBILITY_PROFILES = [
       { runtime: '0.2.2-rc.1', connection: '0.2.2-rc.1' },
       { runtime: '0.2.2-rc.2', connection: '0.2.2-rc.2' },
       { runtime: '0.2.2-rc.3', connection: '0.2.2-rc.3' },
+      { runtime: '0.2.2-rc.4', connection: '0.2.2-rc.4' },
     ],
     hostAdapter: 'carrier-neutral-021',
     clientVariant: 'rc21',

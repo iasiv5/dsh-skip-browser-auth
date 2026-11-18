@@ -520,6 +520,31 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 
 第 6 条（真实 DSH 0.2.2-rc.3 宿主 active checklist）待宿主升级 0.2.2-rc.3 后按 DESIGN 清单执行并回填本条与 README 状态列。
 
+### 5.17 审计记录：`0.2.2-rc.4` 加入 `carrier-neutral-v4`（2026-11-18）
+
+结论：**`0.2.2-rc.4` 经人工复核 REPUBLISH-WITH-REVIEW 的审阅项后通过 §5.1 全部条件，作为第九个 pair 加入 `carrier-neutral-v4`**，未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1，不引入第二个构建输入）。
+
+审计方法：`npm run audit-candidate -- 0.2.2-rc.4`（基准自动取 `0.2.2-rc.3`，退出码 0）。机器判级 **REPUBLISH-WITH-REVIEW**，审阅项为 runtime 新增的升级说明文档；随后对保留的审计目录逐包 `diff -rq` 人工复核，逐包结果：
+
+| 包 | 0.2.2-rc.3 → 0.2.2-rc.4 差异 |
+| --- | --- |
+| `@deepseek-ai/dsh-client-connection`（被替换对象 + client variant 源） | 仅 package.json（版本号与依赖区间 bump）；`lib/`、`client/` 逐字节一致 |
+| `@deepseek-ai/dsh-host-webserver` | 仅 package.json |
+| `@deepseek-ai/dsh-scope` | 仅 package.json |
+| `@deepseek-ai/dsh-invariants` | 两侧均未发布（该线停更，无对比物） |
+| `@deepseek-ai/dsh-host-frontend-static` | 仅 package.json |
+| `@deepseek-ai/dsh-app-boot` | 仅 package.json |
+| `@deepseek-ai/dsh-web-app` | 仅 package.json；官方 patch `cordis.patch.yml` 逐字节一致（connection 行零漂移） |
+| `@deepseek-ai/dsh`（runtime 本体，探针第一锚点） | 代码差异 0 个文件；唯一新增为 `docs/upgrade-guide/v0.2.2-rc.3/deepseek-refusal-code/guide.md` 与 `guide.zh.md` 两份说明文档，并在 upgrade-guide 索引表登记 |
+
+审阅项定性：runtime 新增说明记录流式内容拒答的错误码由 `MALFORMED_RESPONSE` 改为 `CONTENT_REFUSED`（LLM 错误分类面），与 BrowserAuth 跳过、connection 替换、route/body 契约无关，属非替换面演进。
+
+第 4–5 条由本轮测试满足：
+- gate 探针/profile 解析：`0.2.2-rc.4` 精确对正例；同代际跨 patch 混合负例由 gate 全 N×N 循环自动覆盖（必须 dormant）。
+- 真实 npm fixture：登记表追加 `*-rc224` 别名（真实 0.2.2-rc.4 包），`active-generations` / `npm-flat-generations` 循环套件自动扩展到 0.2.2-rc.4（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）。
+
+第 6 条（真实 DSH 0.2.2-rc.4 宿主 active checklist）待宿主升级 0.2.2-rc.4 后按 DESIGN 清单执行并回填本条与 README 状态列。
+
 ## 6. 当前验证状态
 
 已通过：
@@ -543,6 +568,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - 0.2.2-rc.1 真实 npm package carrier-neutral-v4 composition（§5.14：full active checklist、`/connect` 交换端点、同代际跨 minor 混合双向 dormant、npm flat 布局）
 - 0.2.2-rc.2 真实 npm package carrier-neutral-v4 composition（§5.15：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - 0.2.2-rc.3 真实 npm package carrier-neutral-v4 composition（§5.16：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
+- 0.2.2-rc.4 真实 npm package carrier-neutral-v4 composition（§5.17：full active checklist、`/connect` 交换端点、同代际跨 patch 混合双向 dormant、npm flat 布局）
 - rc2 dormant 基线
 - 三个官方 client factory materialization 和 unknown profile fail-closed
 - `npm run test:all`：三代际全量测试通过；真实机器 pnpm layout 检查按当前环境条件跳过。
