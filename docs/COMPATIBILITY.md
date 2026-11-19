@@ -568,7 +568,7 @@ allowedRuntime.includes(runtime) && allowedConnection.includes(connection)
 - gate 探针/profile 解析：`0.2.2-rc.5` 精确对正例；同代际跨 patch 混合负例由 gate 全 N×N 循环自动覆盖（必须 dormant）。
 - 真实 npm fixture：登记表追加 `*-rc225` 别名（真实 0.2.2-rc.5 包），`active-generations` / `npm-flat-generations` 循环套件自动扩展到 0.2.2-rc.5（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）。
 
-第 6 条（真实 DSH 0.2.2-rc.5 宿主 active checklist）待宿主升级 0.2.2-rc.5 后按 DESIGN 清单执行并回填本条与 README 状态列。
+第 6 条（真实 DSH 0.2.2-rc.5 宿主 active checklist）已在 2026-11-19 的 DSH Web `0.2.2-rc.5` 宿主（Host A pnpm runtime 形态，同日 rc.3 → rc.5 升级轮）通过：启动日志出现 BrowserAuth 跳过横幅恰一次，未携带 token 的 `GET /` 返回 200，`skipping profile bundle` 为 0；journal 无 `did not activate` / `waiting for service`。
 
 ## 6. 当前验证状态
 
