@@ -1,8 +1,9 @@
 # @iasiv5/dsh-skip-browser-auth
 
-[![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skip-browser-auth?label=npm&color=cb3837)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
+[![CI](https://img.shields.io/github/actions/workflow/status/iasiv5/dsh-skip-browser-auth/ci.yml?branch=main&label=CI)](https://github.com/iasiv5/dsh-skip-browser-auth/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skip-browser-auth?label=npm)](https://www.npmjs.com/package/@iasiv5/dsh-skip-browser-auth)
+[![License](https://img.shields.io/github/license/iasiv5/dsh-skip-browser-auth?label=License)](./LICENSE)
 [![DSH Web](https://img.shields.io/badge/DSH_Web-0.1.2--rc.1_%7C_0.1.5--rc.1_%7C_0.1.5--rc.2_%7C_0.1.7--rc.1_%7C_0.1.7--rc.2_%7C_0.2.0--rc.1_%7C_0.2.0--rc.2_%7C_0.2.1--rc.1_%7C_0.2.1--rc.2_%7C_0.2.1--rc.3_%7C_0.2.1--rc.4_%7C_0.2.1--rc.5_%7C_0.2.2--rc.1_%7C_0.2.2--rc.2_%7C_0.2.2--rc.3_%7C_0.2.2--rc.4_%7C_0.2.2--rc.5_verified-blue)](#兼容版本)
-[![License](https://img.shields.io/github/license/iasiv5/dsh-skip-browser-auth?color=green)](./LICENSE)
 
 个人自用的 DSH Web 插件：在已验证的 DSH compatibility profile 上自动跳过 BrowserAuth，打开 Web 地址即可直接使用，**不必每次把启动 URL 里那串随机 token 抄进浏览器**。
 
