@@ -4,6 +4,12 @@
 逐版列出面向使用者的变更及当时兼容的 DSH 版本对；白名单之外的版本对插件**自动休眠**，官方行为分毫不变
 （详见 [README · 兼容版本与 profile](./README.md#兼容版本与-profile)）。
 
+## [0.4.12] - 2026-11-19
+
+- 新增 DSH `0.2.2-rc.5` 支持：`npm run audit-candidate` 机械判级 **REPUBLISH-WITH-REVIEW**（退出码 0）——八个锚点包中 `dsh-invariants` 两侧未发布，其余七个包的代码与 web-app 官方 patch 逐字节一致（仅 package.json/README/docs 差异）；runtime 代码差异 0 个文件（Desktop CLI/types 白名单），唯一非清单差异为新增的网页搜索提供方默认值说明文档（`web.searchProvider` 不再固定 `deepseek-search-api`、改为按模型提供方路由自动选择，属组合默认值面，不触 connection/BrowserAuth 替换面）；人工复核后按 §5.1 作为第十个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.18），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）
+- 测试：登记表追加 `*-rc225` 真实 npm fixture 别名，`active-generations` / `npm-flat-generations` 循环套件自动扩展到 0.2.2-rc.5（full active checklist + `/connect` 302/400/403 + 同代际跨 patch 混合双向 dormant）；组合套件直接运行真实 0.2.2-rc.5 包
+- 兼容 DSH：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`、`0.2.2-rc.1`、`0.2.2-rc.2`、`0.2.2-rc.3`、`0.2.2-rc.4`、`0.2.2-rc.5`
+
 ## [0.4.11] - 2026-11-18
 
 - 新增 DSH `0.2.2-rc.4` 支持：`npm run audit-candidate` 机械判级 **REPUBLISH-WITH-REVIEW**（退出码 0）——八个锚点包中 `dsh-invariants` 两侧未发布，其余七个包的代码与 web-app 官方 patch 逐字节一致（仅 package.json/README/docs 差异）；runtime 唯一非清单差异为新增的流式拒答错误码说明文档（`MALFORMED_RESPONSE` → `CONTENT_REFUSED`，属 LLM 错误分类面，不触 connection/BrowserAuth 替换面）；人工复核后按 §5.1 作为第九个 pair 并入 `carrier-neutral-v4`（docs/COMPATIBILITY.md §5.17），未新增 adapter/client variant（rc21 继续锚定 0.2.1-rc.1）

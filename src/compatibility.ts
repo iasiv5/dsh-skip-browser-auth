@@ -217,6 +217,16 @@ export const COMPATIBILITY_PROFILES = [
     // error code MALFORMED_RESPONSE → CONTENT_REFUSED, LLM error-classification
     // surface, outside the connection/BrowserAuth replacement face). rc21 keeps
     // anchoring at 0.2.1-rc.1; no second build input is introduced.
+    //
+    // 0.2.2-rc.5 joined this generation on a REPUBLISH-WITH-REVIEW grade (§5.18):
+    // every anchor package ships manifest/docs-only bumps (connection/webserver/
+    // scope/frontend-static/app-boot/web-app; invariants unpublished on both
+    // sides), web-app's patch stays byte-identical, and the runtime's only
+    // non-manifest change is a new upgrade-guide note (web-search provider
+    // default now routes per model provider instead of pinning
+    // deepseek-search-api — composition default face, outside the
+    // connection/BrowserAuth replacement face). rc21 keeps anchoring at
+    // 0.2.1-rc.1; no second build input is introduced.
     id: 'carrier-neutral-v4',
     pairs: [
       { runtime: '0.2.1-rc.1', connection: '0.2.1-rc.1' },
@@ -228,6 +238,7 @@ export const COMPATIBILITY_PROFILES = [
       { runtime: '0.2.2-rc.2', connection: '0.2.2-rc.2' },
       { runtime: '0.2.2-rc.3', connection: '0.2.2-rc.3' },
       { runtime: '0.2.2-rc.4', connection: '0.2.2-rc.4' },
+      { runtime: '0.2.2-rc.5', connection: '0.2.2-rc.5' },
     ],
     hostAdapter: 'carrier-neutral-021',
     clientVariant: 'rc21',
